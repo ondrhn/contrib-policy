@@ -145,7 +145,7 @@ the body; `STOP` is refused with the project's own sentence. Merge
 
 Two other tools ask a similar question. They came first, they are named here,
 and this table is what each one does, read from its own source at a pinned
-commit - not from anybody's marketing: `yunaremaia/aipr@e168c9c3` (version
+commit rather than from anybody's marketing: `yunaremaia/aipr@e168c9c3` (version
 0.2.2, head on 2026-09-19) and `daichunghy/contribkit@1d23e770`
 (0.1.0-alpha.7, head since 2026-09-06).
 
@@ -199,9 +199,9 @@ answer different halves.
 anywhere else is invisible to it: `gentoo/gentoo` keeps its ban in
 `.github/pull_request_template.md` and aipr reported `files: []`. Its fetcher
 names no host but api.github.com, and the GNOME and Codeberg projects hold most
-of the outright bans. The policy text is its only signal - the repository's own
+of the outright bans. The policy text is its only signal: the repository's own
 settings, its record of merging outside work, a CLA and a DCO are all absent
-from the source - and it neither writes the disclosure line for you nor looks at
+from the source. It neither writes the disclosure line for you nor looks at
 what the text it read is trying to tell an agent to do.
 
 **contribkit** is asked after the change exists, not before: it compiles the
@@ -216,13 +216,13 @@ reading it (no mention of prompt injection, hidden or zero-width text in
 
 **This tool** has limits of the same kind. The classifier is patterns over
 sentences, not a model, so a policy phrased in a way no pattern covers reads as
-silence - which is why the verdict always carries its sentence, and why silence
+silence. That is why the verdict always carries its sentence, and why silence
 is `GO` and not a promise. A policy published on a project website is known only
 through `data/policies.json`, a snapshot of somebody else's list. Off github.com
 two signals cannot be read at all and say so rather than guess:
 `pull_request_creation_policy` and the split between member and outside merges.
-The 90-day external merge count is an estimate - the search API stops at 100
-items, and the sample size is printed next to the number for that reason.
+The 90-day external merge count is an estimate, because the search API stops
+at 100 items; the sample size is printed next to the number for that reason.
 
 No "first" claim is made anywhere in this repository.
 
