@@ -42,10 +42,22 @@ if ! command -v "$JQ" >/dev/null 2>&1; then
   exit 0
 fi
 
-printf '%s' "$IN" | "$JQ" -e . >/dev/null 2>&1 || exit 0   # not a hook payload: say nothing
+if ! printf '%s' "$IN" | "$JQ" -e . >/dev/null 2>&1; then
+  # not a hook payload. Saying nothing would be an allow; the raw text gets the
+  # same closed-for-pull-requests, open-for-everything-else answer as the no-jq path.
+  case "$IN" in
+    *"pr create"*|*"mr create"*|*create_pull_request*|*create_merge_request*|*createPullRequest*)
+      printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"contrib-policy: the hook payload is not json and the call looks like a pull request; refusing rather than guessing."}}' ;;
+  esac
+  exit 0
+fi
 
-TOOL=$(printf '%s' "$IN" | "$JQ" -r '.tool_name // ""')
-CMD=$(printf '%s' "$IN" | "$JQ" -r '.tool_input.command // ""')
+TOOL=$(printf '%s' "$IN" | "$JQ" -r '.tool_name // "" | ascii_downcase')
+CMD=$(printf '%s' "$IN" | "$JQ" -r '(.tool_input | if type == "object" then (.command // "") else (. // "") end) | if type == "string" then . else tojson end')
+# The patterns below read one line of plain words. A newline, a tab, a no-break
+# space, a quote in the middle of a word (gh p"r" create) or a backslash are
+# all ways to write the same command so that a line-based pattern misses it.
+CMDN=$(printf '%s' "$CMD" | tr '\n\t\r' '   ' | sed 's/\xc2\xa0/ /g; s/["'"'"'\\]//g')
 CWD=$(printf '%s' "$IN" | "$JQ" -r '.cwd // "."')
 # an MCP pull request call carries the repository in its arguments
 MCP_REPO=$(printf '%s' "$IN" | "$JQ" -r '[.tool_input.owner // "", .tool_input.repo // ""] | select(.[0] != "" and .[1] != "") | join("/")' 2>/dev/null)
@@ -66,16 +78,27 @@ esac
 # `glab api projects/N/merge_requests -f ...` and the GraphQL createPullRequest
 # mutation open one without ever saying "create". A read of the same path
 # (`-X GET`, or no field at all) is not gated.
-if [ "$GATED" = 0 ] && [ -n "$CMD" ]; then
-  printf '%s' "$CMD" | grep -Eq '(^|[^a-zA-Z0-9_./-])(gh[[:space:]]+pr[[:space:]]+create|glab[[:space:]]+mr[[:space:]]+create)([^a-zA-Z0-9_-]|$)' && GATED=1
-  if [ "$GATED" = 0 ] && printf '%s' "$CMD" | grep -Eq '(^|[^a-zA-Z0-9_./-])(gh|glab)[[:space:]]+api[[:space:]]'; then
-    if printf '%s' "$CMD" | grep -Eq 'createPullRequest|createMergeRequest'; then
+if [ "$GATED" = 0 ] && [ -n "$CMDN" ]; then
+  # `gh`, `/usr/bin/gh`, `./gh`: the name may carry a path
+  printf '%s' "$CMDN" | grep -Eq '(^|[^a-zA-Z0-9_.-])([^[:space:]]*/)?(gh[[:space:]]+pr[[:space:]]+create|glab[[:space:]]+mr[[:space:]]+create)([^a-zA-Z0-9_-]|$)' && GATED=1
+  if [ "$GATED" = 0 ] && printf '%s' "$CMDN" | grep -Eq '(^|[^a-zA-Z0-9_.-])([^[:space:]]*/)?(gh|glab)[[:space:]]+api[[:space:]]'; then
+    if printf '%s' "$CMDN" | grep -Eq 'createPullRequest|createMergeRequest'; then
       GATED=1
-    elif printf '%s' "$CMD" | grep -Eq '/(pulls|merge_requests)([^a-zA-Z0-9_/-]|$)' \
-         && ! printf '%s' "$CMD" | grep -Eq -- '(-X|--method)[[:space:]=]*(GET|HEAD)' \
-         && printf '%s' "$CMD" | grep -Eq -- '(-X|--method)[[:space:]=]*(POST|PUT)|(^|[[:space:]])(-f|-F|--field|--raw-field|--input)([[:space:]=]|$)'; then
+    elif printf '%s' "$CMDN" | grep -Eq 'graphql' && printf '%s' "$CMDN" | grep -Eq -- '(-f|-F|--field|--raw-field|--input)[[:space:]=]*[a-z]*=?@'; then
+      # the query is in a file the hook cannot read: it is treated as a pull
+      # request until the receipt says otherwise
+      GATED=1
+    elif printf '%s' "$CMDN" | grep -Eq '/(pulls|merge_requests)([^a-zA-Z0-9_/-]|$)' \
+         && ! printf '%s' "$CMDN" | grep -Eq -- '(-X|--method)[[:space:]=]*(GET|HEAD)' \
+         && printf '%s' "$CMDN" | grep -Eq -- '(-X|--method)[[:space:]=]*(POST|PUT)|(^|[[:space:]])(-f|-F|--field|--raw-field|--input)([[:space:]=]|$)'; then
       GATED=1
     fi
+  fi
+  # The same request through a plain http client: curl/wget/httpie/xh to the
+  # pull request or merge request endpoint with a body or a write method.
+  if [ "$GATED" = 0 ] && printf '%s' "$CMDN" | grep -Eq '(api\.github\.com/repos/[^[:space:]]*/pulls|/api/v4/projects/[^[:space:]]*/merge_requests|api\.github\.com/graphql)' \
+     && printf '%s' "$CMDN" | grep -Eq -- '(-X|--request|--method|-m)[[:space:]=]*(POST|PUT)|(^|[[:space:]])(-d|--data|--data-raw|--data-binary|--json|--post-data|--body-data|-j)([[:space:]=]|$)|createPullRequest|createMergeRequest|requests\.post|urlopen|http\.client|fetch\('; then
+    GATED=1
   fi
 fi
 [ "$GATED" = 1 ] || exit 0
@@ -106,13 +129,16 @@ TARGET="$R_REPO"
 # otherwise the target is the checkout and the scan is assumed to match it.
 WANT="$MCP_REPO"
 if [ -z "$WANT" ] && [ -n "$CMD" ]; then
-  WANT=$(printf '%s' "$CMD" | grep -oE '(-R|--repo)[ =]+[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+' | head -1 | grep -oE '[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$')
+  WANT=$(printf '%s' "$CMDN" | grep -oE '(-R|--repo)[ =]*[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+' | head -1 | grep -oE '[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$')
 fi
 if [ -z "$WANT" ] && [ -n "$CMD" ]; then   # gh api repos/OWNER/REPO/pulls
-  WANT=$(printf '%s' "$CMD" | grep -oE 'repos/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pulls' | head -1 | sed 's|^repos/||; s|/pulls$||')
+  WANT=$(printf '%s' "$CMDN" | grep -oE 'repos/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pulls' | head -1 | sed 's|^repos/||; s|/pulls$||')
 fi
 if [ -n "$WANT" ] && [ -n "$R_REPO" ] && [ "$WANT" != "$R_REPO" ]; then
   decide deny "contrib-policy: the receipt at $RECEIPT was written for $TARGET, but this pull request goes to $WANT. $HOW"
+fi
+if [ -n "$WANT" ] && [ -z "$R_REPO" ]; then
+  decide deny "contrib-policy: the receipt at $RECEIPT was written for local files, not for $WANT. $HOW"
 fi
 
 case "$VERDICT" in

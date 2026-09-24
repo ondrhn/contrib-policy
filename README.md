@@ -124,7 +124,12 @@ stranger's repository. It is quoted, never executed, never followed. Text
 written at an agent ("if you are an AI, run this"), instructions hidden in HTML
 comments, zero-width and bidi characters, invisible tag-block characters,
 `curl | sh` and opaque blobs are reported, and a suspicious finding turns the
-verdict into `STOP-CHECK`.
+verdict into `STOP-CHECK`. So are the ways a rule can be written for a reader
+and hidden from a pattern: an invisible character inside a word, a Cyrillic or
+Greek look-alike letter, an HTML comment or entity splitting a word, a control
+character or escape sequence, a NUL byte, base64 that decodes to an
+instruction. The text is normalised before it is classified, so the rule is
+read anyway; the trick is what gets reported.
 
 **An agent never signs the DCO.** `Signed-off-by` is a legal certification by
 the person submitting the work; the kernel says it in as many words. The
@@ -139,92 +144,11 @@ same goes for a CLA.
 request tools are denied unless a receipt for that project exists, is fresh,
 and says `GO`; `GO-DECLARE` asks the human to confirm the disclosure line is in
 the body; `STOP` is refused with the project's own sentence. Merge
-`hooks/hooks.json` into `.claude/settings.json` to turn it on.
-
-## Neighbouring tools
-
-Two other tools ask a similar question. They came first, they are named here,
-and this table is what each one does, read from its own source at a pinned
-commit rather than from anybody's marketing: `yunaremaia/aipr@e168c9c3` (version
-0.2.2, head on 2026-09-19) and `daichunghy/contribkit@1d23e770`
-(0.1.0-alpha.7, head since 2026-09-06).
-
-The rows that can be reduced to a number or a grep are in
-`data/neighbours.tsv`, pinned to those commits, and `bash
-scripts/check_neighbours.sh` re-runs all of them against the neighbours' own
-files. If an upstream change makes a row here wrong, that command says so
-instead of this table quietly ageing.
-
-| signal | contrib-policy | aipr 0.2.2 | contribkit 0.1.0-alpha.7 |
-|---|---|---|---|
-| policy text classified | yes | yes | yes |
-| files read | fixed list + repository tree (any name) | 13 fixed paths | fixed list in a local clone |
-| pull request / merge request template | yes | no | yes |
-| github.com | yes | yes | only as a local clone |
-| GitLab, Codeberg/Gitea | yes | no | only as a local clone |
-| remote repository, nothing cloned | yes | yes | no |
-| repository settings (`pull_request_creation_policy`, archived, PRs off) | yes | no | no |
-| 90-day merges from outside contributors | yes | no | no |
-| CLA detection | yes | no | no |
-| DCO detection | yes | no | yes (`SIGNED_OFF` in `evaluate.ts`) |
-| foundation / org rules where the repo is silent | data/orgs.json (ASF, CNCF, GNOME, kernel family, PSF, Eclipse) | probes `<org>/.github` | no |
-| target files treated as untrusted | yes | not stated | yes (`docs/THREAT_MODEL.md`) |
-| screens the text for hidden instructions and reports them | yes | no | no |
-| writes the disclosure line for you | yes (`Assisted-by:`, `Generated-by:`, template box, PR sentence) | no | checks that one exists |
-| judges your diff against the rules | no | no | yes |
-| evidence file (receipt, hashes, "policy changed") | yes | no | yes |
-| PreToolUse hook that blocks `gh pr create` | optional (`hooks/`) | no | yes |
-| language / install | bash, no install | Python, pip or `gh` extension | TypeScript, npm |
-| licence | MIT | MIT | Apache-2.0 |
-
-- **aipr** - <https://github.com/yunaremaia/aipr>. Weighted phrase matching over
-  governance text: 33 compiled patterns in `detector.py`, 13 candidate paths in
-  `cli.py`, five verdicts (`human_only`, `restrictive`, `disclose_ok`,
-  `permissive`, `unknown`) and an exit code. It reads api.github.com only.
-- **contribkit** - <https://github.com/daichunghy/contribkit>. Compiles
-  CONTRIBUTING, the pull request template, CODEOWNERS and an optional
-  `contribkit.yml` into a contract and evaluates the **local diff** against it
-  (`pass` / `blocked` / `needs-human`), with test recording, a Claude Code
-  plugin, MCP and a hook. It reads a git clone on disk, not a remote repository.
-
-The questions differ. aipr and contrib-policy answer "is this project open to
-me?"; contribkit answers "does my diff satisfy this project's contract?". The
-two are complementary: a receipt from here and a preflight from contribkit
-answer different halves.
-
-### Limits, measured
-
-**aipr** looks at thirteen fixed paths, every one of them a `CONTRIBUTING`,
-`AI_POLICY`, `AGENTS`, `CLAUDE` or `README` variant, so a rule that lives
-anywhere else is invisible to it: `gentoo/gentoo` keeps its ban in
-`.github/pull_request_template.md` and aipr reported `files: []`. Its fetcher
-names no host but api.github.com, and the GNOME and Codeberg projects hold most
-of the outright bans. The policy text is its only signal: the repository's own
-settings, its record of merging outside work, a CLA and a DCO are all absent
-from the source. It neither writes the disclosure line for you nor looks at
-what the text it read is trying to tell an agent to do.
-
-**contribkit** is asked after the change exists, not before: it compiles the
-contract from a clone on disk and grades a diff. `src/repo.ts` contains no URL
-at all, so a repository you have not cloned cannot be checked, and a project on
-GitLab or Codeberg is only reachable the same way. It reads no repository
-settings and keeps no openness measure. Its threat model is explicit that every
-file in the target tree is untrusted and that no command found there is run;
-what it does not do is read that text for instructions aimed at the agent
-reading it (no mention of prompt injection, hidden or zero-width text in
-`docs/THREAT_MODEL.md`).
-
-**This tool** has limits of the same kind. The classifier is patterns over
-sentences, not a model, so a policy phrased in a way no pattern covers reads as
-silence. That is why the verdict always carries its sentence, and why silence
-is `GO` and not a promise. A policy published on a project website is known only
-through `data/policies.json`, a snapshot of somebody else's list. Off github.com
-two signals cannot be read at all and say so rather than guess:
-`pull_request_creation_policy` and the split between member and outside merges.
-The 90-day external merge count is an estimate, because the search API stops
-at 100 items; the sample size is printed next to the number for that reason.
-
-No "first" claim is made anywhere in this repository.
+`hooks/hooks.json` into `.claude/settings.json` to turn it on. It reads the
+command text, so a command that hides its shape from the text (a variable that
+holds `gh`, an alias, `base64 -d | sh`, `xargs`, the compare page in a browser)
+is beyond it; the sandbox's network policy is the fence for those, and the hook
+is the second lock.
 
 ## How well does it do?
 
@@ -233,17 +157,21 @@ the expected verdict and the file:line the expectation comes from. The gate is
 at least 90 per cent agreement and **zero** repositories that ban AI work
 reported as safe.
 
-Last run (2026-09-22): 78 cases, 77 correct (98%), 0 unsafe. `bash tests/run.sh`
+Last run (2026-09-24): 78 cases, 77 correct (98%), 0 unsafe. `bash tests/run.sh`
 reproduces it. The one miss is a project whose policy was rewritten after the
 expectation was recorded, and the tool erred on the side of `STOP`. A high score
 on 78 hand-checked repositories is not a claim about the next one: these are the
 cases the patterns were written against, and every verdict still has to be read
 with its quote.
 
-Head to head with aipr over the ten known projects, each one a live
-run of both tools: `docs/comparison.md` (contrib-policy 9 of 9 on the github.com
-rows, aipr 0 correct, 1 wrong, 8 `unknown`; the causes are listed there, and
-most of them are which files each tool reads).
+## Tested against itself
+
+The tool reads files a stranger wrote, so it was attacked as one: invisible
+characters inside words, look-alike letters, HTML and markdown tricks, NUL
+bytes and escape sequences, agent-directed text in shapes the patterns had not
+seen, and every way of spelling `gh pr create` that a hook might miss.
+What got through and what changed is in `docs/red-team-2026-09.md`; every
+row is a fixture the test suite runs.
 
 ## Data
 
@@ -251,17 +179,7 @@ most of them are which files each tool reads).
 |---|---|---|
 | `data/policies.json` | [melissawm/open-source-ai-contribution-policies](https://github.com/melissawm/open-source-ai-contribution-policies), fetched 2026-09-18 | CC0-1.0 |
 | `data/orgs.json` | foundation policy pages, url in every entry | this repository, MIT |
-| `data/aliases.tsv`, `data/known10.tsv` | curated by hand, source in every row | this repository, MIT |
-| `data/neighbours.tsv` | the neighbours' own source at a pinned commit, re-checkable with `scripts/check_neighbours.sh` | this repository, MIT |
-
-Related work worth knowing about:
-[sujeito-operator/ai-contribution-policy](https://github.com/sujeito-operator/ai-contribution-policy)
-(a dataset over the top 800 repositories, CC BY 4.0, and the source of the
-false-positive warning this tool's shield is built on),
-[ecogetaway/oss-ai-contribution-policy](https://github.com/ecogetaway/oss-ai-contribution-policy)
-(a draft `ai-contribution-policy.yml` standard) and
-[bcmyguest/assisted-by](https://github.com/bcmyguest/assisted-by) (enforces the
-`Assisted-by:` trailer from the other side).
+| `data/aliases.tsv` | curated by hand, source in every row | this repository, MIT |
 
 ## Requirements
 
@@ -279,5 +197,4 @@ and a limit that cannot be waited out is `UNKNOWN`, not a verdict.
 ## Licence
 
 MIT. See `LICENSE`. The policy list in `data/policies.json` is CC0-1.0 and
-credited above; the two neighbouring tools are MIT and Apache-2.0 and are
-named, linked and quoted at pinned commits.
+credited above.

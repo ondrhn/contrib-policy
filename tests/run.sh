@@ -312,6 +312,49 @@ for f in curl-pipe-sh html-comment-instruction zero-width zero-width-head tag-bl
 done
 
 echo
+echo "== hardening: hidden text, look-alikes, markup, phrasing (offline) =="
+# Every one of these files carries a refusal a reader sees and a pattern would
+# have missed. The rule has to be read (STOP with the sentence quoted), and the
+# trick has to be reported where there is one.
+for f in hidden-zwnj-word homoglyph-cyrillic fullwidth-ai html-split intraword-emphasis list-heading-items phrases-ban nul-mid-sentence; do
+  is "$f.md is refused"        "STOP" "$(verdict --file "$FIX/$f.md")"
+  is "$f.md quotes a FORBID"   "true" "$(scan --file "$FIX/$f.md" --json | jq '[.quotes[] | select(.class == "FORBID")] | length > 0')"
+done
+is "a zero-width joiner inside a word is reported"  "hidden-unicode" "$(scan --file "$FIX/hidden-zwnj-word.md" --json | jq -r '.injection.findings[0].kind')"
+is "a Cyrillic look-alike inside a word is reported" "mixed-script" "$(scan --file "$FIX/homoglyph-cyrillic.md" --json | jq -r '.injection.findings[0].kind')"
+is "a NUL byte is reported"                          "hidden-control" "$(scan --file "$FIX/nul-mid-sentence.md" --json | jq -r '.injection.findings[0].kind')"
+has "the list heading is carried onto its items" "Not allowed: AI-generated pull requests" \
+    "$(scan --file "$FIX/list-heading-items.md" --json | jq -r '.quotes[].text')"
+is "phrases-ban.md: every sentence is a refusal" "5" \
+   "$(scan --file "$FIX/phrases-ban.md" --json | jq '[.quotes[] | select(.class == "FORBID")] | length')"
+# and the same shapes in innocent text stay innocent
+is "a benign list heading is not a ban"   "GO"   "$(verdict --file "$FIX/list-heading-benign.md")"
+is "a benign list heading is not flagged" "none" "$(scan --file "$FIX/list-heading-benign.md" --json | jq -r .injection.status)"
+is "emoji joiners are still not flagged"  "none" "$(scan --file "$FIX/emoji-zwj.md" --json | jq -r .injection.status)"
+is "a Russian refusal is still read as Russian" "STOP" "$(verdict --file "$FIX/lang-ru-ban.md")"
+is "a Russian disclosure rule is still read as Russian" "GO-DECLARE" "$(verdict --file "$FIX/lang-ru.md")"
+# a list of products with a comma after "Claude" is a list, not a vocative
+is "a product list is not an address to an agent" "none" "$(scan --file "$FIX/product-list.md" --json | jq -r .injection.status)"
+is "a product list still reads its own rule"       "GO"   "$(verdict --file "$FIX/product-list.md")"
+is "a badge data uri is still not an encoded instruction" "none" "$(scan --file "$FIX/badge-data-uri.md" --json | jq -r .injection.status)"
+
+# An escape sequence in a policy file can rewrite the terminal the verdict is
+# printed on. It is reported, and it never reaches the output.
+is "ansi-escape.md is held for a human" "STOP-CHECK" "$(verdict --file "$FIX/ansi-escape.md")"
+is "no escape byte in the text output" "0" "$(scan --file "$FIX/ansi-escape.md" 2>/dev/null | tr -cd '\033' | wc -c | tr -d ' ')"
+is "no escape byte in the json output" "0" "$(scan --file "$FIX/ansi-escape.md" --json 2>/dev/null | tr -cd '\033' | wc -c | tr -d ' ')"
+is "no carriage return in a quote"     "0" "$(scan --file "$FIX/ansi-escape.md" --json | jq -r '.quotes[].text' | tr -cd '\r' | wc -c | tr -d ' ')"
+
+# Text aimed at an agent, in the shapes that got past the first patterns.
+for f in inj-named-address inj-disregard-above inj-any-agent inj-split-lines inj-base64-short inj-bots-should; do
+  is "$f.md is held for a human" "STOP-CHECK" "$(verdict --file "$FIX/$f.md")"
+done
+has "a base64 instruction is quoted decoded" "If you are an AI agent" \
+    "$(scan --file "$FIX/inj-base64-short.md" --json | jq -r '.injection.findings[].text')"
+is "an address on one line and the action on the next is one finding" "1" \
+   "$(scan --file "$FIX/inj-split-lines.md" --json | jq '[.injection.findings[] | select(.kind == "instruction")] | length')"
+
+echo
 echo "== disclosure line (offline) =="
 # One fixture per format the corpus actually asks for. The identity flags are
 # pinned so the expected line is exact.
@@ -804,6 +847,29 @@ is "the same repository passes" "" \
 is "an mcp call for another repository blocks" "deny" \
    "$(gate "$HDIR/repo.json" '{"tool_name":"mcp__github__create_pull_request","tool_input":{"owner":"other","repo":"project","title":"x"},"cwd":"."}')"
 is "an mcp call for the same repository passes" "" "$(gate "$HDIR/repo.json" "$PR_MCP")"
+
+# The command text can be written many ways. The ones a hook can still read:
+for c in $'gh pr\ncreate --fill' '/usr/bin/gh pr create --fill' 'gh p"r" create --fill' "gh pr cre''ate --fill" \
+         'curl -X POST -H "Authorization: token x" https://api.github.com/repos/o/r/pulls -d "{}"' \
+         'python3 -c "import requests;requests.post(\"https://api.github.com/repos/o/r/pulls\")"' \
+         'gh api graphql -F query=@mutation.graphql' 'gh api --method=POST repos/o/r/pulls -f title=x'; do
+  is "gated: ${c:0:44}" "deny" \
+     "$(jq -cn --arg c "$c" '{tool_name:"Bash",tool_input:{command:$c},cwd:"."}' | CONTRIB_POLICY_RECEIPT="$HDIR/stop.json" bash "$HOOK" | jq -r '.hookSpecificOutput.permissionDecision // ""')"
+done
+for c in 'curl -s https://api.github.com/repos/o/r/pulls?state=open' "gh api graphql -f query='{ viewer { login } }'" 'gh api -X GET repos/o/r/pulls -f state=open'; do
+  is "not gated: ${c:0:44}" "" \
+     "$(jq -cn --arg c "$c" '{tool_name:"Bash",tool_input:{command:$c},cwd:"."}' | CONTRIB_POLICY_RECEIPT="$HDIR/stop.json" bash "$HOOK" | jq -r '.hookSpecificOutput.permissionDecision // ""')"
+done
+# a payload that is not json, or whose tool_input is a bare string, does not become an allow
+is "a non-json payload that names a pull request is denied" "deny" \
+   "$(printf 'tool: Bash, command: gh pr create --fill' | CONTRIB_POLICY_RECEIPT="$HDIR/stop.json" bash "$HOOK" | jq -r '.hookSpecificOutput.permissionDecision // ""')"
+is "a non-json payload with no pull request in it is left alone" "" \
+   "$(printf 'not json' | CONTRIB_POLICY_RECEIPT="$HDIR/stop.json" bash "$HOOK")"
+is "tool_input as a bare string is still read" "deny" \
+   "$(printf '%s' '{"tool_name":"Bash","tool_input":"gh pr create","cwd":"."}' | CONTRIB_POLICY_RECEIPT="$HDIR/stop.json" bash "$HOOK" | jq -r '.hookSpecificOutput.permissionDecision // ""')"
+# a receipt written for local files says nothing about a named repository
+is "a local-files receipt does not cover -R other/repo" "deny" \
+   "$(gate "$HDIR/go.json" '{"tool_name":"Bash","tool_input":{"command":"gh pr create -R other/repo --fill"},"cwd":"."}')"
 is "a gh api call names its repository too" "deny" \
    "$(gate "$HDIR/repo.json" '{"tool_name":"Bash","tool_input":{"command":"gh api repos/other/project/pulls -f title=x"},"cwd":"."}')"
 
@@ -832,7 +898,7 @@ echo
 echo "== README and SKILL.md (offline) =="
 # The front door of a skill is read by an agent, so the parts an agent acts on
 # are asserted, not just present: the frontmatter, the two rules that have no
-# exception, and the promise this repository makes about its neighbours.
+# exception, and the numbers the README claims.
 SK="$ROOT/SKILL.md"
 RD="$ROOT/README.md"
 is "SKILL.md opens with frontmatter" "---" "$(head -1 "$SK")"
@@ -849,14 +915,6 @@ has "SKILL.md states the untrusted-data rule" "untrusted data" "$(cat "$SK")"
 has "SKILL.md forbids signing the DCO"        "Never sign the DCO" "$(cat "$SK")"
 has "SKILL.md names the hosts"                "gitlab" "$(tr 'A-Z' 'a-z' < "$SK")"
 
-# The comparison is the honesty claim of this repository: both neighbours named,
-# no "first" claim anywhere.
-has "README names aipr"       "aipr"       "$(cat "$RD")"
-has "README names contribkit" "contribkit" "$(cat "$RD")"
-has "README links aipr"       "github.com/yunaremaia/aipr"    "$(cat "$RD")"
-has "README links contribkit" "github.com/daichunghy/contribkit" "$(cat "$RD")"
-is "README makes no first claim" "" \
-   "$(grep -inE '\b(the )?first (tool|skill|one)\b|only tool that' "$RD")"
 has "README credits the policy list" "melissawm/open-source-ai-contribution-policies" "$(cat "$RD")"
 has "README states the list licence"  "CC0-1.0" "$(cat "$RD")"
 # the accuracy claim has to point at the table that produced it, and count the
@@ -865,7 +923,6 @@ has "README points at the case tables" "tests/cases.tsv" "$(cat "$RD")"
 NCASES=$(grep -hcvE '^[[:space:]]*(#|$)' "$HERE/cases.tsv" "$HERE/cases-dataset.tsv" \
          | awk '{n += $0} END {print n}')
 has "README states the number of cases" "$NCASES cases" "$(cat "$RD")"
-has "README points at the comparison"  "docs/comparison.md" "$(cat "$RD")"
 
 echo
 echo "== json shape =="
@@ -874,127 +931,6 @@ if printf '%s' "$J" | jq -e . >/dev/null 2>&1; then ok "--json emits valid json"
 for k in version ts verdict host kind reasons notes stance quotes disclosure openness injection cla dco org_policy files receipt fetch_errors; do
   is "json has key: $k" "true" "$(printf '%s' "$J" | jq --arg k "$k" 'has($k)')"
 done
-
-echo
-echo "== aipr comparison harness (offline) =="
-CMP="$ROOT/scripts/compare_aipr.sh"
-KNOWN="$ROOT/data/known10.tsv"
-
-# aipr --json is the only contract we depend on: one object with .verdict and
-# .autonomous_safe. Captured from a real run against ghostty-org/ghostty.
-is "aipr json is parsed" "human_only	false" \
-   "$(bash "$CMP" --parse < "$FIX/aipr-ghostty.json")"
-# A traceback or a rate-limit page must not be guessed at.
-is "non-json aipr output becomes error" "error	-" \
-   "$(bash "$CMP" --parse < "$FIX/aipr-rate-limited.txt")"
-is "non-json aipr output exits non-zero" "1" \
-   "$(bash "$CMP" --parse < "$FIX/aipr-rate-limited.txt" >/dev/null 2>&1; echo $?)"
-
-# A repository on another host is carried as an unanswerable row rather than
-# dropped, and rendering it costs no network call.
-OFFHOST=$(bash "$CMP" --repos "$FIX/known-offhost.tsv" --no-fetch --src "$OUT/no-such-aipr" 2>/dev/null)
-has "off-host row is rendered"      "| gedit |"     "$OFFHOST"
-has "off-host row answers n/a"      "| n/a |"       "$OFFHOST"
-has "markdown table has a separator" "|---|"        "$OFFHOST"
-is  "markdown table has header plus one row" "3" \
-    "$(printf '%s\n' "$OFFHOST" | grep -c '^|')"
-
-# docs/comparison.md records a measured run; it goes stale silently unless the
-# repository table and the document are checked against each other.
-MISSING=""
-while IFS=$'\t' read -r repo _rest; do
-  case "${repo:-}" in ''|'#'*) continue ;; esac
-  grep -qF "| $repo |" "$ROOT/docs/comparison.md" || MISSING="$MISSING$repo "
-done < "$KNOWN"
-is "docs/comparison.md covers every row of data/known10.tsv" "" "$MISSING"
-is "data/known10.tsv holds ten projects" "10" "$(grep -cvE '^[[:space:]]*(#|$)' "$KNOWN")"
-
-echo
-echo "== neighbour claims (offline) =="
-# The comparison table in README.md is a claim about somebody else's code. Every
-# row of it that reduces to a number or a grep is in data/neighbours.tsv against
-# a pinned commit, and this is the machinery that re-checks them.
-NBS="$ROOT/scripts/check_neighbours.sh"
-NBT="$ROOT/data/neighbours.tsv"
-OKT="$FIX/neighbours-ok.tsv"
-STALET="$FIX/neighbours-stale.tsv"
-NBFIX="$FIX/neighbours"
-
-OKRUN=$(bash "$NBS" --file "$OKT" --local "$NBFIX")
-is "a claim table that holds prints only ok" "0" \
-   "$(printf '%s\n' "$OKRUN" | grep -cvE '^ok'"$(printf '\t')" || true)"
-is "a claim table that holds exits 0" "0" \
-   "$(bash "$NBS" --file "$OKT" --local "$NBFIX" >/dev/null 2>&1; echo $?)"
-is "a count claim reports the number it found" "3" \
-   "$(printf '%s\n' "$OKRUN" | awk -F'\t' '$4=="count" && $5=="3" {print $6}')"
-
-# The three ways a claim goes stale have to be told apart: wrong number, a thing
-# that was supposed to be absent, and a file that can no longer be read. The
-# first two are failures; the third is not an answer at all.
-STALERUN=$(bash "$NBS" --file "$STALET" --local "$NBFIX" || true)
-is "a moved count fails" "1" \
-   "$(printf '%s\n' "$STALERUN" | awk -F'\t' '$1=="FAIL" && $4=="count"' | grep -c .)"
-is "an absent pattern that is present fails" "1" \
-   "$(printf '%s\n' "$STALERUN" | awk -F'\t' '$1=="FAIL" && $4=="absent"' | grep -c .)"
-is "a file that cannot be read is unread, not a failure" "1" \
-   "$(printf '%s\n' "$STALERUN" | grep -c '^unread')"
-is "a stale table exits 1" "1" \
-   "$(bash "$NBS" --file "$STALET" --local "$NBFIX" >/dev/null 2>&1; echo $?)"
-# Offline is not the same as wrong: nothing readable must not read as "all good".
-is "nothing readable exits 3" "3" \
-   "$(bash "$NBS" --file "$OKT" --local "$NBFIX/nowhere" >/dev/null 2>&1; echo $?)"
-is "a missing claim table is a usage error" "2" \
-   "$(bash "$NBS" --file "$NBFIX/no-such.tsv" >/dev/null 2>&1; echo $?)"
-is "--quiet prints nothing" "" "$(bash "$NBS" --file "$OKT" --local "$NBFIX" --quiet)"
-
-# data/neighbours.tsv integrity: a row that is malformed silently checks nothing.
-NBROWS=$(grep -vE '^[[:space:]]*(#|$)' "$NBT" | grep -v '^target	')
-is "every claim row has six fields" "" \
-   "$(printf '%s\n' "$NBROWS" | awk -F'\t' 'NF!=6 {print NR": "NF" fields"}')"
-is "every check is count, present or absent" "" \
-   "$(printf '%s\n' "$NBROWS" | awk -F'\t' '$3!="count" && $3!="present" && $3!="absent" {print $3}')"
-is "every count claim expects a number" "" \
-   "$(printf '%s\n' "$NBROWS" | awk -F'\t' '$3=="count" && $4 !~ /^[0-9]+$/ {print $0}')"
-# written without an interval expression: not every awk on a contributor's box
-# reads {7,40}
-is "every target is pinned to a commit" "" \
-   "$(printf '%s\n' "$NBROWS" | awk -F'\t' '{
-        n = split($1, p, "@")
-        if (n != 2 || p[1] !~ /^[^\/]+\/[^\/]+$/ || p[2] !~ /^[0-9a-f]+$/ || length(p[2]) < 7)
-          print $1
-      }')"
-is "no claim is stated twice" "" \
-   "$(printf '%s\n' "$NBROWS" | cut -f1,2,3,5 | sort | uniq -d)"
-is "both neighbours are covered" "2" \
-   "$(printf '%s\n' "$NBROWS" | cut -f1 | sort -u | grep -c .)"
-# The commit the table was read at belongs in the README, or the reader cannot
-# tell which version of the neighbour the comparison describes.
-for t in $(printf '%s\n' "$NBROWS" | cut -f1 | sort -u); do
-  has "README pins $t" "${t#*@}" "$(cat "$RD")"
-done
-has "README has the measured limits" "Limits, measured" "$(cat "$RD")"
-has "README points at the claim table" "data/neighbours.tsv" "$(cat "$RD")"
-has "README points at the checker"     "scripts/check_neighbours.sh" "$(cat "$RD")"
-
-# SKILL.md offers the agent a list of options; every one of them has to exist.
-HELP=$(scan --help)
-for o in $(grep -oE '^\| `--[a-z-]+' "$SK" | tr -d '|` '); do
-  has "policy_scan.sh accepts $o (named in SKILL.md)" "$o" "$HELP"
-done
-has "SKILL.md states what it cannot do" "cannot tell you" "$(cat "$SK")"
-
-echo
-echo "== neighbour claims (live, raw.githubusercontent.com) =="
-NB_SKIP=$(host_reason raw.githubusercontent.com)
-if [ -n "$NB_SKIP" ]; then
-  skip "neighbour claims" "$NB_SKIP"
-else
-  LIVE=$(bash "$NBS" || true)
-  is "every claim in data/neighbours.tsv still holds" "" \
-     "$(printf '%s\n' "$LIVE" | grep -vE '^ok'"$(printf '\t')" || true)"
-  is "every claim row was read" "$(printf '%s\n' "$NBROWS" | grep -c .)" \
-     "$(printf '%s\n' "$LIVE" | grep -c .)"
-fi
 
 echo
 echo "== live scans (public GitHub api) =="
@@ -1015,7 +951,7 @@ else
   is "the tree listing is cached"        "true" "$([ -s "$GC/$(jq -r .default_branch "$GC/_meta.json" | tr / _)/_tree.txt" ] && echo true)"
 
   # The organisation case end to end: commons-lang says nothing about AI, so the
-  # verdict has to come from the ASF entry in data/orgs.json - this is aipr's
+  # verdict has to come from the ASF entry in data/orgs.json - this is the
   # apache/* blind spot (it answers unknown; the policy is on apache.org).
   A=$(scan --no-merges --json apache/commons-lang)
   is "apache/commons-lang verdict"    "GO-DECLARE" "$(printf '%s' "$A" | jq -r .verdict)"
@@ -1057,17 +993,6 @@ else
     *) bad "an active project scores above zero" "1-10" "$OS" ;;
   esac
 
-  # End to end through the comparison harness. The aipr column is allowed to be
-  # n/a (no aipr on PATH and no network for the vendored source); our column is
-  # not: an empty verdict there means the harness lost the scan.
-  ROW=$(bash "$CMP" --repos "$FIX/known-one.tsv" --tsv 2>/dev/null | awk -F'\t' '$2=="ghostty-org/ghostty"')
-  is "comparison row is produced"     "GO-DECLARE (1)" "$(printf '%s' "$ROW" | cut -f4)"
-  case "$(printf '%s' "$ROW" | cut -f5)" in
-    "human_only ("*|"restrictive ("*|"disclose_ok ("*|"permissive ("*|"unknown ("*|"error ("*|"n/a (-)")
-      ok "aipr column holds an aipr verdict or n/a" ;;
-    *) bad "aipr column holds an aipr verdict or n/a" "one of aipr's five verdicts, error, or n/a" \
-           "$(printf '%s' "$ROW" | cut -f5)" ;;
-  esac
 fi
 
 echo

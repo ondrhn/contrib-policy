@@ -210,7 +210,7 @@ rate_limited_exit() { # the host said no and the wait is longer than MAX_WAIT: n
 # print one json object), and only a complete object is cached. Non-zero when
 # the caller has to say what went wrong; a rate limit is reported here.
 read_meta() { # read_meta CMD... -> META
-  META=$(cache_get _meta.json) && return 0
+  if META=$(cache_get _meta.json) && printf '%s' "$META" | jq -e 'type == "object"' >/dev/null 2>&1; then return 0; fi
   if META=$("$@") && printf '%s' "$META" | jq -e 'type == "object"' >/dev/null 2>&1; then
     printf '%s' "$META" | cache_put _meta.json; return 0
   fi
@@ -261,9 +261,18 @@ fetch_raw() { # fetch_raw PATH -> writes $WORK/files/<flat>; echo local path on 
 }
 
 add_file() { # add_file LOCALPATH LABEL [section]
-  local local="$1" label="$2" section="${3:-}" src="$1"
+  local local="$1" label="$2" section="${3:-}" src="$1" nuls
   [ -f "$local" ] || return 0
   printf '%s\t%s\n' "$label" "$(sha256sum "$local" | cut -c1-64)" >> "$WORK/hashes"
+  # A NUL byte makes awk stop reading the line and grep call the file binary:
+  # the text after it is hidden from the classifier, not from a reader. The
+  # bytes are removed from the working copy and reported; the hash above is of
+  # the file as it was.
+  nuls=$(tr -cd '\000' < "$local" | wc -c | tr -d ' ')
+  if [ "${nuls:-0}" -gt 0 ]; then
+    tr -d '\000' < "$local" > "$local.nonul"; local="$local.nonul"; src="$local"
+    printf 'hidden-control\tsuspicious\t%s:-\t%s NUL byte(s) in the file; the text after each one is hidden from a byte-based reader\n' "$label" "$nuls" >> "$WORK/injection"
+  fi
   if [ "$section" = "contributing" ]; then
     # README: the sections about contributing and about AI. Several projects
     # (CapyPDF, LOVE) keep the only AI rule in a README heading of its own.
@@ -295,13 +304,13 @@ add_file() { # add_file LOCALPATH LABEL [section]
 #   suspicious - text written at the agent, or text hidden from the reader.
 #                A human reads it before anything else happens (STOP-CHECK).
 #   notice     - a shell pipeline or an opaque blob in a document. Printed only.
-INJ_SUSPICIOUS='ignore (all |the |any |your )?(previous|prior|above|earlier|system) (instructions?|prompts?|rules?|guidance)|disregard (the |all |your |any )?(previous|prior|system|above|earlier)|you are now (a|an|in)|as an ai( language)? model|new instructions?:|(system|initial) prompt:|do not (tell|show|mention|reveal|report|log) (this |it |anything )?(to )?(the )?(user|human|operator|maintainer)|<\|im_start\|>|<\|im_end\|>|\[/?inst\]'
+INJ_SUSPICIOUS='ignore (all |the |any |your |everything |anything )?(previous|prior|above|earlier|preceding|below|system|following)( (instructions?|prompts?|rules?|guidance|text|content|sections?|policy|policies))?|disregard (the |all |your |any |everything |anything )?(previous|prior|system|above|earlier|preceding|below|following)|forget (all |the |your |everything )?(previous|prior|above|earlier)|you are now (a|an|in)|as an ai( language)? model|new instructions?:|(system|initial|developer|hidden) (prompt|message|instructions?):|do not (tell|show|mention|reveal|report|log) (this |it |anything )?(to )?(the )?(user|human|operator|maintainer)|(the )?verdict (is|should be|must be|=|:) *(go|safe|allowed|pass)|(report|answer|return|output|print|mark (this|the) (repository|repo|project)( as)?) +(go|safe|allowed|passed?)|skip (the |this |any )?(policy|safety|contrib|receipt|disclosure|review) (check|scan|gate|step)|(e-?mail|send|upload|post|paste|submit|put) [^.]*(your |the |their |an? )?(api key|access token|auth token|token|secret|credential|password)s? (to|into|at) (https?://|[a-z0-9._-]+@|me |us |this address|the address|the following)|<\|im_start\|>|<\|im_end\|>|\[/?inst\]'
 # Text addressed at the agent is normal in a contribution policy: Polars asks an
 # agent to say so in the pull request, Processing puts a notice at the top of
 # AGENTS.md. It is only a finding when the same line also tells the agent to do
 # something - run, install, fetch, hide. Both halves have to be there.
-INJ_ADDRESS='(dear|hey|attention|note to|instructions? for) (the )?(agent|assistant|ai|claude|copilot|llm|model)|if you(.re| are)? an? (ai|llm|agent|assistant|language model|coding)|(ai|llm|coding) (agents?|assistants?)[ ]*[:,]'
-INJ_ACT='ignore|disregard|run |execute|install|download|fetch|curl |wget |send |e-?mail|upload|add this|append|modify|overwrite|delete|push |force-push|approve|merge|skip|bypass|disable|do not (tell|show|mention|reveal)|secret|token|credential|password|\.env'
+INJ_ADDRESS='(dear|hey|hi|hello|attention|note (to|for)|message (to|for)|instructions? (to|for)|reminder (to|for)) (the |any |all |every |our )?(agents?|assistants?|ai|ais|claude|copilot|cursor|codex|gemini|chatgpt|gpt|llms?|models?|bots?|robots?|language models?|automated (contributors?|tools?|systems?)|coding (agents?|assistants?|tools?))|if you(.re| are)? (an? |the )?(ai|llm|agent|assistant|language model|coding|bot|robot|model|automated|claude|copilot|cursor|codex|gemini)|(^|^[0-9]+:)[ \t#>*_-]*(ai|llm|coding|automated|autonomous) (agents?|assistants?|contributors?|tools?)[ ]*[:,]|(^|^[0-9]+:)[ \t#>*_-]*(claude|copilot|cursor|codex|gemini|chatgpt|gpt|assistant|agent|bot|robot|llm|model)s?[ ]*[,:!]|(to|for) (the |any |every |all |whatever )?(language model|llm|agent|assistant|ai|bot|robot|model|automated [a-z]+) (reading|processing|parsing|that reads|who reads|that is reading|which reads|seeing) this|any (ai|llm|agent|assistant|bot|robot|model|automated [a-z]+) (that|who|which) (reads?|is reading|sees|processes|parses|encounters)|(agents?|assistants?|bots?|robots?|llms?|models?) (reading|processing|parsing) this'
+INJ_ACT='ignore|disregard|run |execute|install|download|fetch|curl |wget |send |e-?mail|upload|add this|append|modify|overwrite|delete|remove|push |force-push|approve|merge|skip|bypass|disable|do not (tell|show|mention|reveal)|secret|token|credential|password|\.env|api key|mark |report |set the verdict|verdict|without (a |the )?disclosure|open the pull request|open a pull request'
 INJ_NOTICE='run the following (command|script)|execute the following|before (contributing|starting|you begin),? (run|execute|install|download)|curl [^|]*\| *(ba|z)?sh|wget [^|]*\| *(ba|z)?sh|install this hook|add this to your (settings|config|configuration|hooks|claude|mcp)'
 
 # Turn `grep -n` output into a finding row. Splitting on the first colon only:
@@ -318,8 +327,13 @@ scan_injection() { # scan_injection LOCALPATH LABEL
   # exactly what this scan is looking for.
   grep -aniE "$INJ_SUSPICIOUS" "$f" 2>/dev/null \
     | cut -c1-200 | awk -v L="$label" -v K=instruction -v S=suspicious "$INJ_AWK" >> "$WORK/injection"
-  grep -aniE "$INJ_ADDRESS" "$f" 2>/dev/null | grep -aiE "$INJ_ACT" \
-    | cut -c1-200 | awk -v L="$label" -v K=instruction -v S=suspicious "$INJ_AWK" >> "$WORK/injection"
+  # The address and the action may sit on different lines of one sentence
+  # ("if you are an AI agent,\nrun ..."), so the sentence units are read as well
+  # as the raw lines; a line already reported is not reported again.
+  { grep -aniE "$INJ_ADDRESS" "$f" 2>/dev/null | grep -aiE "$INJ_ACT" | cut -c1-200
+    awk -F'\t' -v L="$label" '$1 ~ ("^" L ":") { sub(/^[^:]*:/, "", $1); print $1 ":" $2 }' "$WORK/units" 2>/dev/null \
+      | grep -aiE "$INJ_ADDRESS" | grep -aiE "$INJ_ACT" | cut -c1-200
+  } | awk -F: '!seen[$1]++' | awk -v L="$label" -v K=instruction -v S=suspicious "$INJ_AWK" >> "$WORK/injection"
   grep -aniE "$INJ_NOTICE" "$f" 2>/dev/null \
     | cut -c1-200 | awk -v L="$label" -v K=command -v S=notice "$INJ_AWK" >> "$WORK/injection"
   # html comments: hidden from the rendered page, so the same text weighs more.
@@ -342,6 +356,34 @@ scan_injection() { # scan_injection LOCALPATH LABEL
   [ "$(od -An -N3 -tx1 < "$f" | tr -d ' \n')" = "efbbbf" ] && skip=4
   zw=$(tail -c "+$skip" "$f" | LC_ALL=C grep -acE $'\xE2\x80[\x8B\x8E\x8F]|\xE2\x81\xA0|\xEF\xBB\xBF|\xE2\x80[\xAA-\xAE]|\xE2\x81[\xA6-\xA9]|\xF3\xA0[\x80\x81][\x80-\xBF]' 2>/dev/null | tr -d ' ')
   [ "${zw:-0}" -gt 0 ] && printf 'hidden-unicode\tsuspicious\t%s:-\t%s line(s) with zero-width or bidi control characters\n' "$label" "$zw" >> "$WORK/injection"
+  # Control characters and escape sequences: they hide text from a reader or
+  # rewrite the terminal the verdict is printed on ("\e[2K\rverdict: GO").
+  local ctl
+  ctl=$(LC_ALL=C grep -acE $'\x1b|[\x01-\x08\x0b\x0c\x0e-\x1f\x7f]' "$f" 2>/dev/null | tr -d ' ')
+  [ "${ctl:-0}" -gt 0 ] && printf 'hidden-control\tsuspicious\t%s:-\t%s line(s) with control characters or escape sequences\n' "$label" "$ctl" >> "$WORK/injection"
+  # An invisible format character inside a Latin word ("A<200C>I") splits the
+  # word for a pattern and not for a reader. ZWNJ and ZWJ are legitimate between
+  # emoji and in Arabic or Indic script; between two ASCII letters they are not.
+  local inw
+  inw=$(LC_ALL=C grep -acE $'[A-Za-z](\xe2\x80[\x8b-\x8d]|\xcd\x8f|\xe2\x81[\xa0-\xa4]|\xe1\xa0\x8e|\xc2\xad|\xe3\x85\xa4|\xe1\x85[\x9f\xa0]|\xef\xbe\xa0)+[A-Za-z]' "$f" 2>/dev/null | tr -d ' ')
+  [ "${inw:-0}" -gt 0 ] && printf 'hidden-unicode\tsuspicious\t%s:-\t%s line(s) with an invisible character inside a word\n' "$label" "$inw" >> "$WORK/injection"
+  # A Cyrillic or Greek letter glued to Latin letters is a look-alike, not a
+  # word in that language ("\xd0\x90I-generated" reads as AI and matches nothing).
+  local mix
+  mix=$(LC_ALL=C grep -acE $'[A-Za-z](\xd0[\x90-\xbf]|\xd1[\x80-\x9f]|\xce[\x91-\xbf]|\xcf[\x80-\x89])|(\xd0[\x90-\xbf]|\xd1[\x80-\x9f]|\xce[\x91-\xbf]|\xcf[\x80-\x89])[A-Za-z]' "$f" 2>/dev/null | tr -d ' ')
+  [ "${mix:-0}" -gt 0 ] && printf 'mixed-script\tsuspicious\t%s:-\t%s line(s) with Cyrillic or Greek letters inside a Latin word\n' "$label" "$mix" >> "$WORK/injection"
+  # A base64 blob that decodes to text aimed at an agent is an instruction with
+  # a coat on. Only blobs that decode to printable text are looked at.
+  local blob dec
+  sed -E 's/data:[^ )"'"'"']*//g' "$f" | grep -aoE '[A-Za-z0-9+/]{40,}={0,2}' 2>/dev/null | head -n 20 | while IFS= read -r blob; do
+    dec=$(printf '%s' "$blob" | base64 -d 2>/dev/null | tr -d '\r\n' | LC_ALL=C tr -cd '\40-\176' | cut -c1-200)
+    [ "${#dec}" -ge 16 ] || continue
+    case "$dec" in '<'*|'%PDF'*|'{'*|'['*) continue ;; esac   # markup or data, not a sentence
+    if printf '%s' "$dec" | grep -aiqE "$INJ_SUSPICIOUS|$INJ_NOTICE" \
+       || { printf '%s' "$dec" | grep -aiqE "$INJ_ADDRESS" && printf '%s' "$dec" | grep -aiqE "$INJ_ACT"; }; then
+      printf 'encoded-instruction\tsuspicious\t%s:-\tbase64 decodes to: %s\n' "$label" "$dec" >> "$WORK/injection"
+    fi
+  done
   # hidden text in html. A <details> block is not in this set: it collapses the
   # text on github.com but leaves it in the file, so the plain-text passes above
   # already read every line of it. Escalating a collapsed setup command would

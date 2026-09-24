@@ -22,9 +22,9 @@ BEGIN {
   TOOLGEN = "tool[- ](generated|assisted|written|produced|created)|tool (usage|use) in (their|your|the)|assisted-by|generated-by|code assistants?"
   # "co-pilot" with the hyphen is how EmulatorKit on Codeberg writes it, and it is
   # the only AI word in the sentence that carries its ban.
-  AI = W("ai|a\\.i\\.|llms?|large language models?|gpt[-0-9a-z]*|chatgpt|co-?pilot|claude|cursor|codex|gemini|generative|machine[- ]generated|vibe[- ]cod(ed|ing)|coding (agents?|assistants?)|ai[- ]?(generated|assisted|written|powered|tools?|agents?|assistants?|slop|usage|use|policy)|(autonomous|automated) (agents?|contributions?|pull requests?|prs?|submissions?)|agentic|slop|" TOOLGEN)
-  AI_NOSLOP = W("ai|a\\.i\\.|llms?|large language models?|gpt[-0-9a-z]*|chatgpt|co-?pilot|claude|cursor|codex|gemini|generative|machine[- ]generated|vibe[- ]cod(ed|ing)|coding (agents?|assistants?)|ai[- ]?(generated|assisted|written|powered|tools?|agents?|assistants?|usage|use|policy)|(autonomous|automated) (agents?|contributions?|pull requests?|prs?|submissions?)|agentic|" TOOLGEN)
-  FORBID = W("(not|never|don'?t|do not|won'?t|cannot|can'?t|no longer) (be )?(accept|allow|permit|tolerat|want|merge|review|consider|welcome|read)[a-z]*|prohibit[a-z]*|forbidden|banned|ban|not (allowed|permitted|acceptable|welcome|accepted|tolerated|wanted|authori[sz]ed|sanctioned|approved|invited|endorsed|supported)|(must|may|should|shall|will|do|does|can) not (be )?(use|submit|open|creat|generat|contribut|send|includ|incorporat|introduc|employ|rely|contain|have|has)[a-z]*|refrain from|unacceptable|unwelcome|(will|may|are|is|get|gets|be) (be )?(closed|rejected|declined|deleted|ignored|blocked|banned|removed)( (without|immediately|on sight|unread|summarily|and|or))?|human[- ]only|(fully|entirely|100%|completely) human[- ](written|authored|made)|(strict(ly)?|absolutely|zero)[- ]?(no|tolerance)|no (ai|llms?|generative|machine|chatgpt|co-?pilot|llm/ai|ai/llm)|gtfo|zero tolerance|not (a )?place for|off[- ]limits|do not use (ai|llms?|generative|chatgpt|co-?pilot|claude)|refuse")
+  AI = W("ai|a\\.i\\.|llms?|large language models?|language models?|chat ?bots?|machine (assistance|assisted|written|authored)|gpt[-0-9a-z]*|chatgpt|co-?pilot|claude|cursor|codex|gemini|generative|machine[- ]generated|vibe[- ]cod(ed|ing)|coding (agents?|assistants?)|ai[- ]?(generated|assisted|written|powered|tools?|agents?|assistants?|slop|usage|use|policy)|(autonomous|automated) (agents?|contributions?|pull requests?|prs?|submissions?)|agentic|slop|" TOOLGEN)
+  AI_NOSLOP = W("ai|a\\.i\\.|llms?|large language models?|language models?|chat ?bots?|machine (assistance|assisted|written|authored)|gpt[-0-9a-z]*|chatgpt|co-?pilot|claude|cursor|codex|gemini|generative|machine[- ]generated|vibe[- ]cod(ed|ing)|coding (agents?|assistants?)|ai[- ]?(generated|assisted|written|powered|tools?|agents?|assistants?|usage|use|policy)|(autonomous|automated) (agents?|contributions?|pull requests?|prs?|submissions?)|agentic|" TOOLGEN)
+  FORBID = W("(not|never|don'?t|do not|won'?t|cannot|can'?t|no longer) (be )?(accept|allow|permit|tolerat|want|merge|review|consider|welcome|read)[a-z]*|prohibit[a-z]*|forbidden|banned|ban|not (allowed|permitted|acceptable|welcome|accepted|tolerated|wanted|authori[sz]ed|sanctioned|approved|invited|endorsed|supported)|(must|may|should|shall|will|do|does|can) not (be )?(use|submit|open|creat|generat|contribut|send|includ|incorporat|introduc|employ|rely|contain|have|has)[a-z]*|refrain from|unacceptable|unwelcome|(will|may|are|is|get|gets|be) (be )?(closed|rejected|declined|deleted|ignored|blocked|banned|removed)( (without|immediately|on sight|unread|summarily|and|or))?|human[- ]only|(fully|entirely|100%|completely) human[- ](written|authored|made)|(strict(ly)?|absolutely|zero)[- ]?(no|tolerance)|no (ai|llms?|generative|machine|chatgpt|co-?pilot|llm/ai|ai/llm)|gtfo|zero tolerance|not (a )?place for|off[- ]limits|do not use (ai|llms?|generative|chatgpt|co-?pilot|claude)|refuse|refus(es|ed|ing)|(must|should|has to|have to|needs? to) be (written|authored|made|produced|created|done) by (a |an |real |actual )?(human|person|people)|reject(s|ed|ing)?|declin(e|es|ed|ing)|turned away|thrown out")
   NOFORBID = W("no (ai|llms?|generative ai|ai/llm|llm/ai)[- ]?(policy|policies|rule|rules|restriction|restrictions|guideline|guidelines|ban|stance)|not (prohibited|banned|forbidden|against|opposed to)|nothing wrong|not (to|a|an|our|intended to) ban|does not ban|is not a (ban|prohibition)")
   ISSUE_ONLY_SUBJECT = W("issues?|bug reports?|discussions?|comments?")
   # a ban that only bites when nobody is driving: the project still takes work a
@@ -37,8 +37,18 @@ BEGIN {
   # still mean "unattended work", but next to a plain AI word they are part of a
   # list ("contributions from Generative AI, LLMs or autonomous agents") and the
   # sentence is a refusal of AI work, not a rule about supervision.
+  # "will be closed without review": the review that is missing is the
+  # maintainer's, as a consequence. That is a refusal, not an oversight rule.
+  # "written by a human, without machine assistance": the "without" is the ban
+  # itself, not a condition on it.
+  NOASSIST = W("without (any )?(machine|ai|llm|automated|generative) (assistance|help|involvement|aid|tools?)")
+  CLOSED_UNREAD = W("(closed|rejected|deleted|ignored|removed|declined|discarded) (without|unread|immediately|on sight|summarily)")
+  # ... unless the sentence makes it conditional on not saying so: "use of AI
+  # without transparency may lead to submissions being rejected" is a
+  # disclosure rule with a consequence attached.
+  NOT_DISCLOSED_COND = W("without (transparency|disclosure|disclosing|declaring|declaration|saying so|telling us|mentioning it|attribution|credit)")
   AUTONOMY_WEAK = W("autonomous(ly)?|agentic|automated (agents?|systems?|tools?|submissions?|contributions?)|bots?")
-  PLAIN_AI = W("ai|a\\.i\\.|llms?|large language models?|gpt[-0-9a-z]*|chatgpt|co-?pilot|claude|cursor|codex|gemini|generative|machine[- ]generated|vibe[- ]cod(ed|ing)|ai[- ]?(generated|assisted|written|powered|tools?|slop)")
+  PLAIN_AI = W("ai|a\\.i\\.|llms?|large language models?|language models?|chat ?bots?|machine (assistance|assisted|written|authored)|language models?|chat ?bots?|machine (assistance|assisted|written|authored)|gpt[-0-9a-z]*|chatgpt|co-?pilot|claude|cursor|codex|gemini|generative|machine[- ]generated|vibe[- ]cod(ed|ing)|ai[- ]?(generated|assisted|written|powered|tools?|slop)")
   # "reply to questions with AI" is a rule about conversation, not about patches
   REPLY_SUBJECT = W("repl(y|ies|ying)|respond(ing)?|responses?|answer(ing|s)?|comment(ing|s)?|questions?|reviews?|reviewing")
   # a box the contributor has to tick affirming that no AI was involved
@@ -59,7 +69,7 @@ BEGIN {
   # SearXNG blocks "people who produce bad contributions that are clearly AI".
   # Good AI-assisted work is still taken, so this is not a refusal of AI.
   # "slop" is deliberately absent: it is the usual word for AI output as such.
-  QUALITY = W("bad|low[- ]quality|poor(ly)?|sloppy|careless|thoughtless|lazy|broken|spam|spammy|junk|garbage|useless|nonsense|drive[- ]?by|incorrect|untested|unreviewed|half[- ]baked")
+  QUALITY = W("slop|bad|low[- ]quality|poor(ly)?|sloppy|careless|thoughtless|lazy|broken|spam|spammy|junk|garbage|useless|nonsense|drive[- ]?by|incorrect|untested|unreviewed|half[- ]baked")
   # "These PRs will be closed immediately": the subject points back at a sentence
   # that is read on its own, so this one cannot carry a ban by itself.
   # Only the unambiguous back-references: "that's why X is not allowed" opens a
@@ -216,6 +226,7 @@ BEGIN {
   if (l !~ AI_NOSLOP) { print "MENTION\t" loc "\t" s; next }
 
   forbid = (l ~ FORBID) && (l !~ NOFORBID)
+  unread = (l ~ CLOSED_UNREAD) && (l !~ NOT_DISCLOSED_COND)
   head = l
   sub(/^[-*+#>[:space:]]+/, "", head)
   sub(/^[0-9]+[.)][ \t]+/, "", head)
@@ -274,11 +285,11 @@ BEGIN {
       cls = "OVERSIGHT"
     } else if (l ~ NEG_OVERSIGHT) {
       cls = "OVERSIGHT"
-    } else if (l ~ IFCOND && (disclose || l ~ OVERSIGHT)) {
+    } else if (l ~ IFCOND && !unread && (disclose || l ~ OVERSIGHT)) {
       if (disclose) cls = "DISCLOSE"; else cls = "OVERSIGHT"
-    } else if (l !~ ENUM && (l ~ AUTONOMY || (l ~ AUTONOMY_WEAK && l !~ PLAIN_AI))) {
+    } else if (l !~ ENUM && !unread && (l ~ AUTONOMY || (l ~ AUTONOMY_WEAK && l !~ PLAIN_AI))) {
       cls = "OVERSIGHT"
-    } else if (rl ~ REPLY_SUBJECT && rl !~ W("code|patch(es)?|diffs?")) {
+    } else if (rl ~ REPLY_SUBJECT && rl !~ W("code|patch(es)?|diffs?") && !unread) {
       cls = "ISSUE_ONLY"
     } else if (l ~ ISSUE_ONLY_SUBJECT && l !~ PR_SUBJECT) {
       cls = "ISSUE_ONLY"
@@ -295,7 +306,7 @@ BEGIN {
       # (generative use):" introduce a list. The items that follow are read on
       # their own, so the heading is not the blanket ban it looks like.
       cls = "FORBID_PARTIAL"
-    } else if (l ~ QUALCOND) {
+    } else if (l ~ QUALCOND && !unread && l !~ NOASSIST) {
       # the refusal carries a qualifier it did not have to carry ("PRs that
       # result from running an AI tool over the codebase without prior context",
       # "unless specifically requested by the maintainers"). "If you are X, get
