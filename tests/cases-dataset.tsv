@@ -1,0 +1,12 @@
+# repo	expected	source
+# Same format as cases.tsv, but the scan runs WITH data/policies.json.
+#
+# These three projects publish their AI policy somewhere no file fetch can reach:
+# a project website, or a GitHub wiki, which is a separate repository with no raw
+# file API. No pattern set can find text that is not in the repository, so reading
+# the list is the only way to get them right - which is what the list is for.
+# The group therefore tests the dataset path and the "apply the stricter one" rule.
+
+AsahiLinux/linux	STOP	asahilinux.org/docs/project/policies/slop/ (allowed=No); the repository itself is a kernel fork and carries no AI ban
+curl/curl	GO-DECLARE	curl.se/dev/contribute.html#on-ai-use-in-curl (disclosure=Yes); docs/CONTRIBUTE.md makes disclosure mandatory for security reports only, so the text alone reads as GO
+datajourneyhq/datajourney	GO-DECLARE	github.com/DataJourneyHQ/DataJourney/wiki (disclosure=Yes); the wiki is not part of the repository tree

@@ -1,0 +1,19 @@
+{
+  "repo": "ghostty-org/ghostty",
+  "verdict": "human_only",
+  "files": [
+    "AI_POLICY.md",
+    "CONTRIBUTING.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.md"
+  ],
+  "evidence": [
+    "[+3.0] ...er rules in this policy. - **Bad AI drivers will be denounced** People who produce bad contributions that are...",
+    "[+2.5] ...rict rules for AI usage: - **All AI usage in any form must be disclosed.** You must state the tool you used (e.g. Claud...",
+    "[+2.0] ...form must be disclosed.** You must state the tool you used (e.g. Claude Code, Cursor, Amp) along with the..."
+  ],
+  "autonomous_safe": false,
+  "confidence": 1.0,
+  "score": 7.5
+}

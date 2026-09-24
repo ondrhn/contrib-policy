@@ -1,0 +1,5 @@
+# Project
+
+[![build](data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5MCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjkwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjNGMxIi8+PHRleHQgeD0iNDUiIHk9IjE0IiBmaWxsPSIjZmZmIiBmb250LXNpemU9IjExIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5wYXNzaW5nPC90ZXh0Pjwvc3ZnPg==)](https://example.org/ci)
+
+Contributions are welcome, including AI-assisted ones.

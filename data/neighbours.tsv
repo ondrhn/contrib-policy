@@ -1,0 +1,33 @@
+# Machine-checkable claims behind the comparison table in README.md.
+# Each row is one fact read from the neighbour's own source at a pinned commit,
+# so the table can be re-verified instead of trusted: bash scripts/check_neighbours.sh
+#
+# target                          = owner/repo@commit
+# check                           = count (matching lines) | present | absent
+# expect                          = the number count must produce (- for present/absent)
+# pattern                         = ERE passed to grep -E
+# claim                           = the README row this row stands behind
+#
+# aipr 0.2.2 (version at this commit; the commits after the 0.2.2 tag are a
+# cache, an SSRF fix and logging, none of them a new signal or a new file).
+target	path	check	expect	pattern	claim
+yunaremaia/aipr@e168c9c3	LICENSE	present	-	^MIT License	licence MIT
+yunaremaia/aipr@e168c9c3	src/aipr/detector.py	count	33	re\.compile	33 weighted phrase patterns
+yunaremaia/aipr@e168c9c3	src/aipr/cli.py	count	13	^    "[^"]*",$	13 fixed candidate paths
+yunaremaia/aipr@e168c9c3	src/aipr/cli.py	present	-	ORG_FALLBACK_FILES	probes <org>/.github
+yunaremaia/aipr@e168c9c3	src/aipr/cli.py	absent	-	[Pp]ull_[Rr]equest_[Tt]emplate|PULL_REQUEST_TEMPLATE	no pull request template
+yunaremaia/aipr@e168c9c3	src/aipr/cli.py	absent	-	pull_request_creation_policy|"archived"|has_pull_requests	no repository settings
+yunaremaia/aipr@e168c9c3	src/aipr/cli.py	absent	-	author_association|/search/issues	no 90-day merges from outside
+yunaremaia/aipr@e168c9c3	src/aipr/cli.py	absent	-	gitlab|codeberg|gitea	github.com only
+yunaremaia/aipr@e168c9c3	src/aipr/cli.py	absent	-	clabot|cla\.yml|[Cc]ontributor [Ll]icense	no CLA detection
+yunaremaia/aipr@e168c9c3	src/aipr/cli.py	absent	-	[Ss]igned-off-by	no DCO detection
+yunaremaia/aipr@e168c9c3	src/aipr/detector.py	absent	-	[Ss]igned-off-by	no DCO detection
+# contribkit 0.1.0-alpha.7, unchanged since 2026-09-06.
+daichunghy/contribkit@1d23e770	LICENSE	present	-	Apache License	licence Apache-2.0
+daichunghy/contribkit@1d23e770	src/evaluate.ts	present	-	SIGNED_OFF	DCO detection
+daichunghy/contribkit@1d23e770	src/codeowners.ts	present	-	parseCodeowners	reads CODEOWNERS
+daichunghy/contribkit@1d23e770	src/repo.ts	absent	-	https://|api\.github\.com	local clone only, no remote query
+daichunghy/contribkit@1d23e770	docs/THREAT_MODEL.md	present	-	untrusted	target files treated as untrusted
+daichunghy/contribkit@1d23e770	docs/THREAT_MODEL.md	absent	-	prompt injection|zero-width|hidden instruction|invisible	no screen for text aimed at the agent
+daichunghy/contribkit@1d23e770	hooks/hooks.json	present	-	PreToolUse	hook that blocks gh pr create
+daichunghy/contribkit@1d23e770	hooks/hooks.json	present	-	glab mr create	the hook covers glab as well

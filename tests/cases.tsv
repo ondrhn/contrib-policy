@@ -1,0 +1,89 @@
+# repo	expected	source
+# expected: GO | GO-DECLARE | STOP. Ground truth is the melissawm list (data/policies.json,
+# CC0-1.0) and the plan documents; the scan under test runs with --no-dataset so the list
+# grades the pattern set instead of feeding it.
+#
+# Where the repository's own text contradicts the list's summary columns, the
+# text wins and the source column carries the quote with file and line, so the
+# correction can be checked. Repositories whose policy is not in the repository
+# at all (a project website, a GitHub wiki) are in cases-dataset.tsv instead:
+# finding those is the job of data/policies.json, not of the pattern set.
+
+# known projects (plan 01): policy lives off GitHub or under a different name in the list
+django/django	GO-DECLARE	melissawm/Django (allowed=Yes disclosure=Yes oversight=Yes)
+apache/arrow	GO-DECLARE	melissawm/Arrow (allowed=Yes disclosure=Yes oversight=Yes)
+fastapi/fastapi	GO	melissawm/FastAPI (allowed=Yes disclosure=No oversight=Yes)
+gentoo/gentoo	STOP	melissawm/Gentoo Linux (allowed=No)
+kysely-org/kysely	STOP	plan 01: LLM contribution farming rejected in CONTRIBUTING.md
+gradio-app/gradio	STOP	plan 02: pull_request_creation_policy=collaborators_only
+
+# melissawm list, github-hosted
+aaif-goose/goose	GO	melissawm/goose (allowed=Yes disclosure=No oversight=Yes)
+alacritty/alacritty	STOP	melissawm/Alacritty (allowed=No disclosure=- oversight=-)
+apache/airflow	GO-DECLARE	melissawm/Apache Airflow (allowed=Yes disclosure=Yes oversight=Yes)
+apache/couchdb	STOP	melissawm/Apache CouchDB (allowed=No disclosure=- oversight=-)
+apache/pouchdb	STOP	melissawm/Apache PouchDB (allowed=No disclosure=- oversight=-)
+astral-sh/ruff	GO	melissawm/ruff (allowed=Yes disclosure=No oversight=Yes)
+astral-sh/ty	GO	melissawm/ty (allowed=Yes disclosure=No oversight=Yes)
+astral-sh/uv	GO	melissawm/uv (allowed=Yes disclosure=No oversight=Yes)
+astropy/astropy-project	GO-DECLARE	corrected from the list (disclosure=No): policies/ai-policy.md:10 "contributors must describe their use in the change description"
+bcpierce00/unison	STOP	melissawm/Unison (allowed=No disclosure=- oversight=-)
+bradyajohnston/molecularnodes	GO-DECLARE	melissawm/Molecular Nodes (allowed=Yes* disclosure=Yes oversight=Yes)
+cilium/community	GO-DECLARE	melissawm/cilium (allowed=Yes disclosure=Yes oversight=Yes)
+cleverraven/cataclysm-dda	STOP	melissawm/Cataclysm: Dark Days Ahead (allowed=No disclosure=- oversight=-)
+cloudnative-pg/governance	GO-DECLARE	melissawm/CloudNativePG (allowed=Yes disclosure=Yes oversight=Yes)
+conda/conda	GO	melissawm/conda (allowed=Yes disclosure=No oversight=Yes)
+dune3d/dune3d	STOP	melissawm/Dune 3D (allowed=No disclosure=- oversight=-)
+endless-sky/endless-sky	STOP	melissawm/Endless Sky (allowed=No disclosure=- oversight=-)
+flutter/flutter	GO	melissawm/Flutter (allowed=Yes disclosure=No oversight=Yes)
+ghostty-org/ghostty	GO-DECLARE	melissawm/Ghostty (allowed=Yes disclosure=Yes oversight=Yes)
+go-gitea/gitea	GO-DECLARE	melissawm/Gitea (allowed=Yes disclosure=Yes oversight=Yes)
+hbons/bobby	STOP	melissawm/Bobby (allowed=No disclosure=- oversight=-)
+homebrew/brew	GO-DECLARE	melissawm/Homebrew (allowed=Yes disclosure=Yes oversight=Yes)
+idris-lang/idris2	STOP	melissawm/Idris (allowed=No disclosure=- oversight=-)
+inochi2d/inochi2d	STOP	melissawm/Inochi2D (allowed=No disclosure=- oversight=-)
+jhy/jsoup	STOP	melissawm/jsoup (allowed=No disclosure=- oversight=-)
+johnearnest/decker	STOP	melissawm/Decker (allowed=No disclosure=- oversight=-)
+jpakkane/capypdf	STOP	melissawm/CapyPDF (allowed=No disclosure=- oversight=-)
+jqwik-team/jqwik	STOP	melissawm/Jqwik (allowed=No disclosure=- oversight=-)
+kornia/kornia	GO-DECLARE	melissawm/Kornia (allowed=Yes disclosure=Yes oversight=Yes)
+libsdl-org/sdl	STOP	melissawm/SDL (allowed=No disclosure=- oversight=-)
+libsdl-org/sdl_net	STOP	melissawm/SDL_net (allowed=No disclosure=- oversight=-)
+linkml/linkml	GO-DECLARE	melissawm/LinkML (allowed=Yes disclosure=Yes* oversight=Yes)
+lobsters/lobsters	STOP	melissawm/Lobsters (allowed=No disclosure=- oversight=-)
+love2d/love	STOP	melissawm/LÖVE (allowed=No disclosure=- oversight=-)
+mdanalysis/mdanalysis	GO-DECLARE	melissawm/MDAnalysis (allowed=Yes* disclosure=Yes oversight=Yes)
+mgba-emu/mgba	STOP	melissawm/mGBA (allowed=No disclosure=- oversight=-)
+micropython/micropython	GO	melissawm/MicroPython (allowed=Yes disclosure=No oversight=Yes)
+moongardenmods/allium	STOP	melissawm/Allium (allowed=No disclosure=- oversight=-)
+mozilla-firefox/firefox	GO	melissawm/Firefox (allowed=Yes disclosure=No oversight=Yes)
+nothings/stb	STOP	melissawm/stb (allowed=No disclosure=- oversight=-)
+nvim-tree/nvim-tree.lua	GO-DECLARE	melissawm/nvim-tree (allowed=Yes* disclosure=Yes oversight=Yes)
+ocaml/ocaml	GO-DECLARE	melissawm/OCaml (allowed=Yes disclosure=Yes oversight=Yes)
+openedx/.github	GO-DECLARE	melissawm/Open edX (allowed=Yes* disclosure=Yes oversight=Yes)
+openttd/openttd	STOP	melissawm/OpenTTD (allowed=No disclosure=- oversight=-)
+openzim/wp1	GO	melissawm/WP1 (allowed=Yes disclosure=No oversight=Yes)
+pkgconf/pkgconf	STOP	melissawm/pkgconf (allowed=No disclosure=- oversight=-)
+pola-rs/polars	GO-DECLARE	melissawm/Polars (allowed=Yes disclosure=Yes oversight=Yes)
+processing/processing4	GO-DECLARE	melissawm/Processing/p5.js (allowed=Yes disclosure=Yes oversight=Yes)
+psf/requests	STOP	the AI policy allows it, but gh api repos/psf/requests reports pull_request_creation_policy=collaborators_only (2026-09-18): no outside pull request can be opened at all
+pydata/xarray	GO-DECLARE	corrected from the list (disclosure=No): .github/PULL_REQUEST_TEMPLATE.md "AI Disclosure" section asks which tool was used; CLAUDE.md:43 "always include a co-authorship trailer"
+pypa/pip	GO-DECLARE	corrected from the list (disclosure=No): .github/PULL_REQUEST_TEMPLATE.md:16 "if any AI tools were used, I have disclosed it below"
+pytest-dev/pytest	GO	melissawm/Pytest (allowed=Yes disclosure=No oversight=Yes): CONTRIBUTING.rst:236 "consider adding ``Co-authored-by`` trailers", :237 "This is not required, but helps reviewers set expectations"; the tick box at .github/PULL_REQUEST_TEMPLATE.md:17 sits inside the HTML comment that opens at :1 and closes at :31, so it never reaches the pull request body
+python/cpython	GO	melissawm/CPython (allowed=Yes disclosure=No oversight=Yes)
+pytorch/pytorch	GO-DECLARE	corrected from the list (disclosure=No): AI_POLICY.md:5 "AI-generated content in comments, issues, or PRs must be clearly disclosed"
+pyvista/pyvista	GO-DECLARE	corrected from the list (disclosure=No): CONTRIBUTING.rst:142 "disclosure is required here, where the guide only appreciates it"
+qgis/qgis-enhancement-proposals	GO-DECLARE	melissawm/QGIS (allowed=Yes disclosure=Yes oversight=Yes)
+qutip/qutip	GO-DECLARE	melissawm/qutip (allowed=Yes disclosure=Yes oversight=Yes)
+relintai/pandemonium_engine	STOP	melissawm/Pandemonium Engine (allowed=No disclosure=- oversight=-)
+schismtracker/schismtracker	STOP	melissawm/Schism Tracker (allowed=No disclosure=- oversight=-)
+searxng/searxng	GO-DECLARE	melissawm/SearXNG (allowed=Yes disclosure=Yes oversight=Yes)
+sphinx-doc/sphinx	GO-DECLARE	melissawm/Sphinx (allowed=Yes disclosure=Yes oversight=Yes)
+squidowl/halloy	STOP	melissawm/Halloy (allowed=No disclosure=- oversight=-)
+stac-utils/stac-utils.github.io	GO-DECLARE	melissawm/STAC (allowed=Yes disclosure=Yes oversight=Yes)
+team-crystalline/lighthouse	STOP	melissawm/Lighthouse (allowed=No disclosure=- oversight=-)
+teamtype/teamtype	STOP	melissawm/Teamtype (allowed=No disclosure=- oversight=-)
+torchgeo/governance	GO-DECLARE	melissawm/TorchGeo (allowed=Yes disclosure=Yes oversight=Yes)
+uaanchorage/gsoc	GO	melissawm/University of Alaska Anchorage (allowed=Yes* disclosure=No oversight=Yes)
+yt-dlp/yt-dlp	STOP	melissawm/yt-dlp (allowed=No disclosure=- oversight=-)
+zulip/zulip	GO	melissawm/Zulip (allowed=Yes disclosure=No oversight=Yes)

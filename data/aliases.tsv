@@ -1,0 +1,12 @@
+# repo	project	source
+# Projects whose AI policy is published on their own website, so the melissawm
+# list has no GitHub repository for them and data/policies.json carries
+# "github": null. This file says which repository the policy applies to.
+#
+# repo    OWNER/REPO, or OWNER/* for every repository of an organisation
+# project the "project" field in data/policies.json, matched exactly
+# Curated by hand. Only add a row when the policy page names the repository or
+# the organisation it governs.
+
+AsahiLinux/*	Asahi Linux	asahilinux.org/docs/project/policies/slop/ applies to the whole project
+curl/curl	curl	curl.se/dev/contribute.html is generated from docs/CONTRIBUTE.md in this repository

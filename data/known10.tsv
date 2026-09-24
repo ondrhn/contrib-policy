@@ -1,0 +1,21 @@
+# Ten projects whose policy is known from a primary source; the source is in every row.
+# Columns: repo <TAB> project <TAB> expected <TAB> ground truth
+#
+# `repo` is OWNER/REPO on github.com, or HOST:PATH when the project is not on
+# github.com at all. A HOST:PATH row is carried through the comparison as a row
+# neither tool can answer yet; it is the host limit, not a miss.
+# `expected` is GO | GO-DECLARE | STOP, the same vocabulary tests/cases.tsv uses.
+# Where the repository's own text settles the question, the ground truth column
+# carries file:line so the expectation can be rechecked; where the policy is
+# published off the repository, it carries the URL instead.
+
+curl/curl	curl	GO-DECLARE	curl.se/dev/contribute.html#on-ai-use-in-curl (disclosure=Yes); in the repository docs/CONTRIBUTE.md:356 only asks for human understanding
+ghostty-org/ghostty	Ghostty	GO-DECLARE	AI_POLICY.md:5 "All AI usage in any form must be disclosed"
+gentoo/gentoo	Gentoo Linux	STOP	.github/pull_request_template.md:9 attestation "has not been created with the assistance of Natural Language Processing artificial intelligence tools"
+gitlab.gnome.org:World/gedit/gedit	gedit	STOP	GNOME project ban; the canonical repository is GNOME GitLab and there is no github.com mirror
+AsahiLinux/linux	Asahi Linux	STOP	asahilinux.org/docs/project/policies/slop/ (allowed=No); the repository is a kernel fork and carries no AI text of its own
+python/cpython	CPython	GO	devguide: disclosure is thanked, not required; no AI rule in the repository tree
+django/django	Django	GO-DECLARE	melissawm/Django (allowed=Yes disclosure=Yes oversight=Yes)
+fastapi/fastapi	FastAPI	GO	melissawm/FastAPI (allowed=Yes disclosure=No oversight=Yes)
+python-attrs/attrs	attrs	GO-DECLARE	.github/AI_POLICY.md:62 no LLM co-author trailer, .github/PULL_REQUEST_TEMPLATE.md:18 tick box acknowledging the AI policy
+apache/arrow	Apache Arrow	GO-DECLARE	.github/pull_request_template.md:24 "please disclose below whether and how AI was used in this PR"

@@ -1,0 +1,84 @@
+{
+  "note": "Foundation or organisation level rules, applied when a repository itself says nothing. Owners are GitHub owner names (case-insensitive). stance: forbid | disclose | oversight | allow | silent; silent means the body publishes no AI rule and only its cla/dco facts are used. rule is the sentence printed as the reason when the stance is inherited. Placeholders in disclosure_line: {agent} {model} {tool}.",
+  "updated": "2026-09-18",
+  "orgs": [
+    {
+      "id": "asf",
+      "name": "Apache Software Foundation",
+      "owners": ["apache"],
+      "stance": "disclose",
+      "policy_url": "https://www.apache.org/legal/generative-tooling.html",
+      "rule": "generative tooling may be used for an ASF contribution when the contributor holds the rights to the output, and the contribution has to record which tool produced it, by convention a Generated-by: trailer",
+      "disclosure_format": "commit-trailer",
+      "disclosure_line": "Generated-by: {tool}",
+      "cla": "ICLA only for committers; not needed for a pull request",
+      "dco": false,
+      "note": "Applies to every ASF project unless the project publishes something stricter (Airflow, Arrow, Kvrocks, DataFusion do). Enforcement is per project."
+    },
+    {
+      "id": "cncf",
+      "name": "Cloud Native Computing Foundation",
+      "owners": ["cncf", "kubernetes", "kubernetes-sigs", "kubernetes-client", "containerd", "envoyproxy", "helm", "prometheus", "etcd-io", "open-telemetry", "argoproj", "fluxcd", "cilium", "istio", "linkerd", "knative", "open-policy-agent", "falcosecurity", "cri-o", "spiffe", "backstage", "dapr", "kedacore", "kyverno", "vitessio", "tikv", "cert-manager", "cortexproject", "thanos-io", "grpc", "nats-io", "jaegertracing", "coredns", "rook", "longhorn", "crossplane", "karmada-io", "volcano-sh"],
+      "stance": "silent",
+      "policy_url": "https://github.com/cncf/foundation/blob/main/policies-guidance/dco-guidelines.md",
+      "rule": "the foundation publishes no rule about AI-assisted contributions; every commit needs a DCO sign-off from the human contributor",
+      "disclosure_format": "none",
+      "disclosure_line": "",
+      "cla": "",
+      "dco": true,
+      "note": "Every CNCF project requires a DCO sign-off on each commit. The person submitting signs; an agent must not add Signed-off-by."
+    },
+    {
+      "id": "gnome",
+      "name": "GNOME",
+      "owners": ["gnome"],
+      "stance": "forbid",
+      "policy_url": "https://handbook.gnome.org/infrastructure/github_mirror.html",
+      "rule": "github.com/GNOME is a read-only mirror of gitlab.gnome.org and pull requests opened there are not accepted; several GNOME projects also reject generative AI contributions outright",
+      "disclosure_format": "none",
+      "disclosure_line": "",
+      "cla": "",
+      "dco": false,
+      "note": "Work on gitlab.gnome.org instead. Several GNOME projects (libadwaita, gedit, Amberol, GIMP) reject generative AI contributions outright; check the project CONTRIBUTING.md on GitLab."
+    },
+    {
+      "id": "linux-kernel-family",
+      "name": "Linux kernel and projects using the kernel Assisted-by convention",
+      "owners": ["torvalds", "zephyrproject-rtos", "openstack", "rocky-linux", "mesa3d", "fedora-infra"],
+      "stance": "disclose",
+      "policy_url": "https://docs.kernel.org/process/coding-assistants.html",
+      "rule": "a coding assistant may be used and the commit has to say so with an Assisted-by: trailer; the Signed-off-by line stays the human contributor's alone",
+      "disclosure_format": "commit-trailer",
+      "disclosure_line": "Assisted-by: {agent}:{model}",
+      "cla": "",
+      "dco": true,
+      "note": "docs.kernel.org/process/coding-assistants: the kernel itself writes the trailer as `Assisted-by: LLM [tool1] [tool2]` (tools = analysis tools such as coccinelle); Zephyr, Fedora, Rocky Linux, Mesa and OpenInfra use `Assisted-by: <Agent>:<Model> [tools]`. In all of them AI agents must not add Signed-off-by; only the human contributor certifies the DCO. torvalds/linux and openstack on GitHub are mirrors that do not take pull requests."
+    },
+    {
+      "id": "psf",
+      "name": "Python Software Foundation / CPython",
+      "owners": ["python", "psf"],
+      "stance": "allow",
+      "policy_url": "https://devguide.python.org/getting-started/pull-request-lifecycle/",
+      "rule": "AI-assisted work is accepted from a contributor who understands and can defend every line of it, and saying that a tool helped is welcome rather than required",
+      "disclosure_format": "pr-body",
+      "disclosure_line": "This change was prepared with the help of {tool}; I reviewed and tested it myself.",
+      "cla": "PSF Contributor Agreement (click-through, checked by a bot on the pull request)",
+      "dco": false,
+      "note": "CPython asks contributors to say when AI was used and to understand every line; the PSF CLA is required before a pull request can be merged."
+    },
+    {
+      "id": "eclipse",
+      "name": "Eclipse Foundation",
+      "owners": ["eclipse", "eclipse-ee4j", "eclipse-vertx", "eclipse-che", "eclipse-theia", "eclipse-jdt", "eclipse-platform", "eclipse-jkube", "eclipse-openj9", "eclipse-tractusx"],
+      "stance": "silent",
+      "policy_url": "https://www.eclipse.org/legal/eca/",
+      "rule": "the foundation publishes no rule about AI-assisted contributions; every commit needs an Eclipse Contributor Agreement and a DCO sign-off from the human contributor",
+      "disclosure_format": "none",
+      "disclosure_line": "",
+      "cla": "Eclipse Contributor Agreement (ECA) signed with the committer's Eclipse account; commits must use the same email",
+      "dco": true,
+      "note": "The ECA includes the DCO; each commit needs Signed-off-by from the human contributor."
+    }
+  ]
+}
