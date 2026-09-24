@@ -1,6 +1,0 @@
-# Offline claim table over tests/fixtures/neighbours/ (read with --local).
-target	path	check	expect	pattern	claim
-fixture/one@abc1234	src/sample.py	count	3	re\.compile	three patterns
-fixture/one@abc1234	src/sample.py	count	2	^    "[^"]*",$	two candidate paths
-fixture/one@abc1234	src/sample.py	present	-	CANDIDATE_FILES	a fixed path list
-fixture/one@abc1234	src/sample.py	absent	-	[Ss]igned-off-by	no DCO handling

@@ -1,3 +1,0 @@
-# One row, on a host neither tool can reach. The table can be rendered without
-# a single network call, which is what the offline test needs.
-gitlab.gnome.org:World/gedit	gedit	STOP	GNOME project ban; canonical repository is GNOME GitLab

@@ -1,6 +1,0 @@
-# Three ways a claim goes stale: the count moved, something the table says is
-# absent is there, and the file is gone.
-target	path	check	expect	pattern	claim
-fixture/one@abc1234	src/sample.py	count	17	re\.compile	seventeen patterns
-fixture/one@abc1234	src/sample.py	absent	-	CANDIDATE_FILES	no fixed path list
-fixture/one@abc1234	src/gone.py	present	-	anything	a file that is not there

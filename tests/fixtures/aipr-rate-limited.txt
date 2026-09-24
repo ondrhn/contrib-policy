@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/usr/lib/python3/aipr/cli.py", line 106, in _fetch
-    with urllib.request.urlopen(req, timeout=15) as resp:
-urllib.error.HTTPError: HTTP Error 403: rate limit exceeded
