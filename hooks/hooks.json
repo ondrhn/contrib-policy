@@ -1,5 +1,4 @@
 {
-  "_comment": "Optional Claude Code gate: no pull request without a fresh contrib-policy receipt. Merge this into .claude/settings.json. $CLAUDE_PROJECT_DIR is the project root; use an absolute path to this checkout when contrib-policy lives elsewhere. See hooks/pr_gate.sh and SKILL.md.",
   "hooks": {
     "PreToolUse": [
       {
@@ -7,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/hooks/pr_gate.sh\""
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT:-$CLAUDE_PROJECT_DIR}/hooks/pr_gate.sh\""
           }
         ]
       },
@@ -16,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/hooks/pr_gate.sh\""
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT:-$CLAUDE_PROJECT_DIR}/hooks/pr_gate.sh\""
           }
         ]
       }

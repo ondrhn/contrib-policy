@@ -60,16 +60,36 @@ choice is to disclose or not to contribute.
 
 ## Install
 
-As a skill (`SKILL.md` is at the root of this repository, the layout the
-[skills CLI](https://skills.sh) and Claude Code expect):
+Three ways, pick one.
+
+**As a Claude Code plugin.** Two commands inside Claude Code:
+
+```
+/plugin marketplace add ondrhn/contrib-policy
+/plugin install contrib-policy@ondrhn
+```
+
+The skill shows up in `/skills` as `contrib-policy:contrib-policy`. Read this
+before you install: the plugin also turns on the pull request gate. From then
+on `gh pr create`, `glab mr create` and the pull request API are denied in
+that session until `scripts/policy_scan.sh OWNER/REPO --receipt` has been run
+for the project and the receipt says GO; `GO-DECLARE` asks you to confirm the
+disclosure line is in the body. That is the point of the plugin, not a side
+effect. `/plugin disable contrib-policy@ondrhn` turns it off.
+
+**As a skill, without the gate.** `SKILL.md` sits at the root of this
+repository, the layout the [skills CLI](https://skills.sh) and Claude Code
+expect:
 
 ```
 npx skills add ondrhn/contrib-policy          # any agent that reads skills
 git clone https://github.com/ondrhn/contrib-policy ~/.claude/skills/contrib-policy   # Claude Code, by hand
 ```
 
-As a command, clone it anywhere and run `scripts/policy_scan.sh`. Nothing is
-installed and nothing is compiled: bash, curl, jq and awk, plus `gh` for
+The gate stays off unless you merge `hooks/hooks.json` into your settings.
+
+**As a command.** Clone it anywhere and run `scripts/policy_scan.sh`. Nothing
+is installed and nothing is compiled: bash, curl, jq and awk, plus `gh` for
 github.com targets.
 
 ## Use
@@ -143,8 +163,9 @@ same goes for a CLA.
 `gh pr create`, `glab mr create`, the raw API behind them and the MCP pull
 request tools are denied unless a receipt for that project exists, is fresh,
 and says `GO`; `GO-DECLARE` asks the human to confirm the disclosure line is in
-the body; `STOP` is refused with the project's own sentence. Merge
-`hooks/hooks.json` into `.claude/settings.json` to turn it on. It reads the
+the body; `STOP` is refused with the project's own sentence. The plugin turns
+it on; a hand-installed skill turns it on by merging `hooks/hooks.json` into
+`.claude/settings.json`. It reads the
 command text, so a command that hides its shape from the text (a variable that
 holds `gh`, an alias, `base64 -d | sh`, `xargs`, the compare page in a browser)
 is beyond it; the sandbox's network policy is the fence for those, and the hook

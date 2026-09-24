@@ -1,0 +1,27 @@
+{
+  "name": "ondrhn",
+  "description": "Plugins by ondrhn: tools that read a project's rules before an agent acts on it.",
+  "owner": {
+    "name": "Önderhan İşlekoğlu",
+    "url": "https://github.com/ondrhn"
+  },
+  "plugins": [
+    {
+      "name": "contrib-policy",
+      "source": "./",
+      "version": "0.1.0",
+      "description": "Reads a project's contribution rules before a pull request goes out and answers GO / GO-DECLARE / STOP with the sentence that decides it. Installing this plugin also turns on a PreToolUse gate: gh pr create, glab mr create and the pull request API are denied until scripts/policy_scan.sh has been run for that project with --receipt and the receipt says GO.",
+      "homepage": "https://github.com/ondrhn/contrib-policy",
+      "license": "MIT",
+      "keywords": [
+        "pull-request",
+        "contribution-policy",
+        "ai-policy",
+        "github",
+        "gitlab",
+        "codeberg",
+        "hook"
+      ]
+    }
+  ]
+}

@@ -887,6 +887,30 @@ is "no jq leaves other commands alone" "" \
 has "SKILL.md documents the hook"     "hooks/pr_gate.sh" "$(cat "$ROOT/SKILL.md")"
 has "SKILL.md says the hook is optional" "optional"      "$(grep -A2 'hooks/pr_gate.sh' "$ROOT/SKILL.md")"
 
+# The plugin packaging: two manifests, and the hook command has to find the
+# gate both as a plugin (${CLAUDE_PLUGIN_ROOT}) and merged into settings by
+# hand (${CLAUDE_PROJECT_DIR}).
+MP="$ROOT/.claude-plugin/marketplace.json"; PJ="$ROOT/.claude-plugin/plugin.json"
+is "marketplace.json is valid json" "true" "$(jq -e . "$MP" >/dev/null 2>&1 && echo true)"
+is "marketplace.json names the marketplace" "ondrhn" "$(jq -r .name "$MP")"
+is "marketplace.json lists the plugin at the root" "./" "$(jq -r '.plugins[] | select(.name == "contrib-policy") | .source' "$MP")"
+has "the marketplace entry says the gate comes with it" "PreToolUse gate" "$(jq -r '.plugins[0].description' "$MP")"
+is "plugin.json is valid json" "true" "$(jq -e . "$PJ" >/dev/null 2>&1 && echo true)"
+is "plugin.json names the plugin" "contrib-policy" "$(jq -r .name "$PJ")"
+is "plugin.json points the skill at the root SKILL.md" "." "$(jq -r .skills "$PJ")"
+is "plugin.json and marketplace.json agree on the version" "$(jq -r .version "$PJ")" "$(jq -r '.plugins[0].version' "$MP")"
+has "plugin.json says the gate comes with it" "gate" "$(jq -r .description "$PJ")"
+HC=$(jq -r '.hooks.PreToolUse[0].hooks[0].command' "$ROOT/hooks/hooks.json")
+is "the hook command runs the gate as a plugin" "deny"    "$(printf '%s' "$PR_BASH" | CONTRIB_POLICY_RECEIPT="$HDIR/stop.json" CLAUDE_PLUGIN_ROOT="$ROOT" CLAUDE_PROJECT_DIR=/nonexistent bash -c "$HC" | jq -r '.hookSpecificOutput.permissionDecision // ""')"
+is "the hook command runs the gate from settings" "deny"    "$(printf '%s' "$PR_BASH" | CONTRIB_POLICY_RECEIPT="$HDIR/stop.json" CLAUDE_PROJECT_DIR="$ROOT" bash -c "unset CLAUDE_PLUGIN_ROOT; $HC" | jq -r '.hookSpecificOutput.permissionDecision // ""')"
+if command -v claude >/dev/null 2>&1; then
+  is "claude plugin validate --strict passes" "0" "$(cd "$ROOT" && claude plugin validate . --strict >/dev/null 2>&1; echo $?)"
+else
+  skip "claude plugin validate" "claude not installed"
+fi
+has "README shows the plugin install" "/plugin install contrib-policy@ondrhn" "$(cat "$ROOT/README.md")"
+has "README warns that the plugin turns on the gate" "turns on the pull request gate" "$(cat "$ROOT/README.md")"
+
 # The configuration that installs it.
 is "hooks/hooks.json is valid json" "true" "$(jq -e . "$ROOT/hooks/hooks.json" >/dev/null 2>&1 && echo true)"
 is "hooks.json runs the gate on PreToolUse" "2" \

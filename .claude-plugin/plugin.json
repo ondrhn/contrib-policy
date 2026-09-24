@@ -1,0 +1,15 @@
+{
+  "name": "contrib-policy",
+  "displayName": "contrib-policy",
+  "version": "0.1.0",
+  "description": "Read a project's contribution rules before opening a pull request: GO / GO-DECLARE / STOP, with the sentence that decides it. Ships a PreToolUse gate that denies gh pr create, glab mr create and the pull request API until a fresh receipt for that project says GO.",
+  "author": {
+    "name": "Önderhan İşlekoğlu",
+    "url": "https://github.com/ondrhn"
+  },
+  "homepage": "https://github.com/ondrhn/contrib-policy",
+  "repository": "https://github.com/ondrhn/contrib-policy",
+  "license": "MIT",
+  "keywords": ["pull-request", "contribution-policy", "ai-policy", "github", "gitlab", "codeberg", "hook"],
+  "skills": "."
+}

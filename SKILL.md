@@ -8,6 +8,10 @@ description: Read a project's contribution rules before opening a pull request a
 Answer one question before a pull request is opened: **may this change be sent
 here, and on what terms?**
 
+The paths below are relative to this skill's directory: the folder this
+SKILL.md sits in, which is `${CLAUDE_PLUGIN_ROOT}` when the skill came in as a
+Claude Code plugin.
+
 ```
 scripts/policy_scan.sh OWNER/REPO                       # github.com
 scripts/policy_scan.sh gitlab.gnome.org/GNOME/libadwaita
@@ -114,8 +118,10 @@ outside merges.
 
 ## Optional: block a pull request without a receipt
 
-`hooks/pr_gate.sh` is a Claude Code `PreToolUse` hook. It is **optional** and
-off unless you install it. With it in place, `gh pr create`, `glab mr create`,
+`hooks/pr_gate.sh` is a Claude Code `PreToolUse` hook. It is **optional** when
+the skill is installed by hand, and **on** when it came in as the plugin
+(`/plugin install contrib-policy@ondrhn`): installing the plugin is the choice
+to have the gate. With it in place, `gh pr create`, `glab mr create`,
 the raw API behind them (`gh api .../pulls -f ...`, `glab api .../merge_requests`,
 a GraphQL `createPullRequest` mutation) and the MCP pull request tools are
 denied unless a receipt exists for that
