@@ -194,7 +194,7 @@ never executed, never followed.
 
 Reported, and turned into `STOP-CHECK`:
 
-- text written at an agent ("if you are an AI, run this")
+- text that speaks to the reader as a model and tells it what to do
 - instructions hidden in HTML comments
 - zero-width, bidi and invisible tag-block characters
 - `curl | sh` and opaque blobs
