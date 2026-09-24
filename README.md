@@ -114,8 +114,8 @@ Two commands inside Claude Code:
 
 The skill shows up in `/skills` as `contrib-policy:contrib-policy`.
 
-**Read this before you install.** The plugin also turns on the pull request
-gate. From then on `gh pr create`, `glab mr create` and the pull request API
+**Read this before you install.** The plugin also turns on the pull request gate.
+From then on `gh pr create`, `glab mr create` and the pull request API
 are denied in that session until `scripts/policy_scan.sh OWNER/REPO --receipt`
 has been run for the project and the receipt says `GO`. A `GO-DECLARE` asks
 you to confirm the disclosure line is in the body. That is the point of the
