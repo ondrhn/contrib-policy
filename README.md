@@ -1,5 +1,7 @@
 # contrib-policy
 
+[![skills.sh](https://skills.sh/b/ondrhn/contrib-policy)](https://skills.sh/ondrhn/contrib-policy)
+
 **Read a project's contribution rules before you open the pull request.**
 A skill for coding agents, and a command for people, that answers one question
 about any repository: *may this change be sent here, and on what terms?*
