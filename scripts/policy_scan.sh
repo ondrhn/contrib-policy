@@ -702,8 +702,11 @@ if [ "$NO_MERGES" = 0 ] && [ "$VERDICT" != STOP ]; then
     MERGES_TOTAL=$(printf '%s' "$M" | cut -f1); ext=$(printf '%s' "$M" | cut -f2); MERGES_SAMPLE=$(printf '%s' "$M" | cut -f3)
     if [ "$MERGES_SAMPLE" -gt 0 ] && [ "$MERGES_TOTAL" -gt "$MERGES_SAMPLE" ]; then MERGES_EXT=$(( ext * MERGES_TOTAL / MERGES_SAMPLE )); else MERGES_EXT=$ext; fi
     MERGES_CHECKED=1
-    if [ "$MERGES_TOTAL" -eq 0 ]; then reason "no pull request merged in the last 90 days"
-    elif [ "$ext" -eq 0 ]; then reason "no pull request from an outside contributor merged in the last 90 days ($MERGES_TOTAL merges, all from members)"
+    # Zero merges is low openness, which the score below says; it is not a rule
+    # against the pull request. A closed door (archived, pull requests off,
+    # collaborators_only) is a reason above and never reaches this block.
+    if [ "$MERGES_TOTAL" -eq 0 ]; then note "no pull request merged in the last 90 days"
+    elif [ "$ext" -eq 0 ]; then note "no pull request from an outside contributor merged in the last 90 days ($MERGES_TOTAL merges, all from members)"
     elif [ "$MERGES_EXT" -le 2 ]; then note "only $MERGES_EXT outside pull request(s) merged in 90 days; expect slow review"
     fi
   else
